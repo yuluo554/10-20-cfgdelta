@@ -1,0 +1,45 @@
+# ---- Go 标准模板 ----
+# 编译产物
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+build/
+
+# 测试产物
+*.test
+*.out
+coverage.txt
+coverage.html
+profile.cov
+cpu.out
+mem.out
+
+# 依赖目录（vendored 依赖如决定入库，用 !vendor/ 显式放行）
+vendor/
+
+# Go 工作区与工具缓存
+go.work
+go.work.sum
+.idea/
+.vscode/
+*.swp
+
+# ---- 题面约定 ----
+# 发布产物（Release 附件本地留副本在 dist-release/，压缩包不入库）
+*.zip
+*.tar.gz
+*.tar.xz
+
+# 本地夹具与临时目录（golden 夹具入库，临时生成的不入）
+/tmp/
+/.cache/
+.venv/
+
+# 操作系统垃圾文件
+.DS_Store
+Thumbs.db
+desktop.ini
