@@ -1,0 +1,10 @@
+kind: Service
+metadata:
+  name: synth-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: synth-a
+  ports:
+    - port: 80
+      targetPort: 8080

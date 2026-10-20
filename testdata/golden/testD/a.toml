@@ -1,0 +1,3 @@
+[service]
+name = "synth"
+port = 8080

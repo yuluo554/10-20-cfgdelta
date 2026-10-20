@@ -1,0 +1,13 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: synth-a
+spec:
+  template:
+    spec:
+      containers:
+        - name: web
+          image: registry.example/synth/web:1.0.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80

@@ -1,0 +1,96 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # ── 方法论布局门：独立 job，红了立刻可见，不与被测代码混在一起 ──────────────
+  layout:
+    name: "Sprint layout gate"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: "Layout gate (methodology binding)"
+        run: node tools/check-sprint-layout.mjs
+
+  # ── 生成物与镜像一致性：数据源与内嵌副本不得漂移 ────────────────────────
+  consistency:
+    name: "Generated artefacts in sync"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - name: "Version mirror"
+        run: node tools/sync-version.mjs --check
+      - name: "Profile mirror"
+        run: node tools/sync-profiles.mjs --check
+      - name: "Golden manifest"
+        run: node tools/gen-golden-manifest.mjs --check
+
+  test:
+    name: "test (${{ matrix.os }})"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - name: "go vet"
+        run: go vet ./...
+      - name: "go test"
+        run: go test ./...
+      - name: "Build static binary"
+        shell: bash
+        run: |
+          set -euo pipefail
+          CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o dist/cfgdelta ./cmd/cfgdelta
+      - name: "Golden selftest"
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./dist/cfgdelta selftest
+      - name: "Exit code contract smoke"
+        shell: bash
+        run: |
+          set -euo pipefail
+          # 用法错误必须是 3（K-07），不是 2 / 1。
+          set +e
+          ./dist/cfgdelta nosuchcommand >/dev/null 2>&1
+          code=$?
+          set -e
+          test "$code" = "3"
+          # 等价输入必须是 0。
+          ./dist/cfgdelta diff --profile k8s/v1.29 testdata/golden/testA/k1.yaml testdata/golden/testA/k2.yaml >/dev/null
+          # 反例必须非 0（1Gi vs 1000M）。
+          set +e
+          ./dist/cfgdelta diff --coerce-at "/limits/*=quantity" testdata/golden/testC/c08-left.yaml testdata/golden/testC/c08-right.yaml >/dev/null 2>&1
+          code=$?
+          set -e
+          test "$code" = "1"
+      - name: "Determinism (two runs, identical bytes)"
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./dist/cfgdelta classify testdata/golden/testA/k1.yaml testdata/golden/testA/k2.yaml > run1.txt
+          ./dist/cfgdelta classify testdata/golden/testA/k1.yaml testdata/golden/testA/k2.yaml > run2.txt
+          cmp run1.txt run2.txt

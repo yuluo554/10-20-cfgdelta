@@ -1,0 +1,416 @@
+{
+  "generated_by": "tools/gen-golden-manifest.mjs",
+  "scope_note": "Covers the four red-teamed families (A/B/C/D) plus the 10 defaulting rules in data/profiles/k8s/v1.29.json. NOT full Kubernetes semantics.",
+  "cases": [
+    {
+      "case": "classify-exposure",
+      "args": [
+        "classify",
+        "testGate/exposure-left.yaml",
+        "testGate/exposure-right.yaml"
+      ],
+      "exit": 1,
+      "behavioral": 2,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "service type + port change are 接口·暴露"
+    },
+    {
+      "case": "classify-resource-shrink",
+      "args": [
+        "classify",
+        "testGate/shrink-left.yaml",
+        "testGate/shrink-right.yaml"
+      ],
+      "exit": 1,
+      "behavioral": 2,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "replicas 3->2 and memory 1Gi->512Mi are both 资源·收缩"
+    },
+    {
+      "case": "exit-coerce-miss",
+      "args": [
+        "diff",
+        "--coerce-at",
+        "/nope/*=quantity",
+        "testA/k1.yaml",
+        "testA/k2.yaml"
+      ],
+      "exit": 3,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "unmatched --coerce-at glob is a usage error, never silent"
+    },
+    {
+      "case": "exit-gate-empty",
+      "args": [
+        "gate",
+        "testA/k1.yaml",
+        "testA/k2.yaml"
+      ],
+      "exit": 3,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "gate without --fail-on is a usage error"
+    },
+    {
+      "case": "exit-missing-args",
+      "args": [
+        "diff",
+        "testA/k1.yaml"
+      ],
+      "exit": 3,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "missing positional is a usage error (3)"
+    },
+    {
+      "case": "exit-missing-file",
+      "args": [
+        "diff",
+        "testA/does-not-exist.yaml",
+        "testA/k2.yaml"
+      ],
+      "exit": 3,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "missing input file is 3"
+    },
+    {
+      "case": "exit-unknown-class",
+      "args": [
+        "gate",
+        "--fail-on",
+        "not-a-class",
+        "testA/k1.yaml",
+        "testA/k2.yaml"
+      ],
+      "exit": 3,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "unknown impact class is 3"
+    },
+    {
+      "case": "exit-unknown-profile",
+      "args": [
+        "diff",
+        "--profile",
+        "k8s/v9.99",
+        "testA/k1.yaml",
+        "testA/k2.yaml"
+      ],
+      "exit": 3,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "unknown profile version is 3, no fallback"
+    },
+    {
+      "case": "exit-unknown-subcommand",
+      "args": [
+        "nosuchcommand"
+      ],
+      "exit": 3,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "usage error is 3, never 2"
+    },
+    {
+      "case": "exit-version",
+      "args": [
+        "--version"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "version always exits 0"
+    },
+    {
+      "case": "gate-fail-on-shrink",
+      "args": [
+        "gate",
+        "--fail-on",
+        "资源·收缩",
+        "testGate/shrink-left.yaml",
+        "testGate/shrink-right.yaml"
+      ],
+      "exit": 1,
+      "behavioral": 2,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "gate blocks because the listed class is present"
+    },
+    {
+      "case": "gate-ignore-shrink",
+      "args": [
+        "gate",
+        "--fail-on",
+        "接口·暴露",
+        "testGate/shrink-left.yaml",
+        "testGate/shrink-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 2,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "gate does NOT block: unlisted behavioural differences are printed but do not fail the build"
+    },
+    {
+      "case": "testA-ctrl-profile",
+      "args": [
+        "diff",
+        "--profile",
+        "k8s/v1.29",
+        "testA-ctrl/k1.yaml",
+        "testA-ctrl/k2.yaml"
+      ],
+      "exit": 1,
+      "behavioral": 1,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "anti-over-silencing control: explicit imagePullPolicy: Always is still reported"
+    },
+    {
+      "case": "testA-no-profile",
+      "args": [
+        "diff",
+        "testA/k1.yaml",
+        "testA/k2.yaml"
+      ],
+      "exit": 1,
+      "behavioral": 2,
+      "cosmetic": 2,
+      "indeterminate": [],
+      "note": "without the defaults table the two defaulted keys are reported as behavioural findings"
+    },
+    {
+      "case": "testA-profile",
+      "args": [
+        "diff",
+        "--profile",
+        "k8s/v1.29",
+        "testA/k1.yaml",
+        "testA/k2.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 2,
+      "indeterminate": [],
+      "note": "headline case: defaults cancel on both sides; only the two unit spellings remain (cosmetic)"
+    },
+    {
+      "case": "testB-ordered",
+      "args": [
+        "diff",
+        "testB/va.yaml",
+        "testB/vb.yaml"
+      ],
+      "exit": 1,
+      "behavioral": 4,
+      "cosmetic": 2,
+      "indeterminate": [],
+      "note": "ordered mode mismatches the two reordered env entries — expected, that is why set/keyed exist"
+    },
+    {
+      "case": "testB-seq-keyed",
+      "args": [
+        "diff",
+        "--seq-mode",
+        "keyed:name",
+        "testB/va.yaml",
+        "testB/vb.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 2,
+      "indeterminate": [],
+      "note": "keyed:name aligns env entries by name: 0 behaviour differences"
+    },
+    {
+      "case": "testB-seq-set",
+      "args": [
+        "diff",
+        "--seq-mode",
+        "set",
+        "testB/va.yaml",
+        "testB/vb.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 2,
+      "indeterminate": [],
+      "note": "env ordering is irrelevant in set mode: 0 behaviour differences"
+    },
+    {
+      "case": "testC-c01",
+      "args": [
+        "diff",
+        "--coerce-at",
+        "/limits/*=quantity",
+        "testC/c01-left.yaml",
+        "testC/c01-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 1,
+      "indeterminate": [],
+      "note": "1Gi == 1024Mi (1024^3)"
+    },
+    {
+      "case": "testC-c02",
+      "args": [
+        "diff",
+        "--coerce-at",
+        "/limits/*=quantity",
+        "testC/c02-left.yaml",
+        "testC/c02-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 1,
+      "indeterminate": [],
+      "note": "1000M == 1G (10^9)"
+    },
+    {
+      "case": "testC-c03",
+      "args": [
+        "diff",
+        "--coerce-at",
+        "/limits/*=quantity",
+        "testC/c03-left.yaml",
+        "testC/c03-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 1,
+      "indeterminate": [],
+      "note": "8000m == 8"
+    },
+    {
+      "case": "testC-c04",
+      "args": [
+        "diff",
+        "--coerce-at",
+        "/limits/*=duration",
+        "testC/c04-left.yaml",
+        "testC/c04-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 1,
+      "indeterminate": [],
+      "note": "90s == 1m30s"
+    },
+    {
+      "case": "testC-c05",
+      "args": [
+        "diff",
+        "--coerce-at",
+        "/limits/*=duration",
+        "testC/c05-left.yaml",
+        "testC/c05-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 1,
+      "indeterminate": [],
+      "note": "1h == 60m"
+    },
+    {
+      "case": "testC-c06",
+      "args": [
+        "diff",
+        "--coerce-at",
+        "/limits/*=decimal",
+        "testC/c06-left.yaml",
+        "testC/c06-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 1,
+      "indeterminate": [],
+      "note": "1e3 == 1000 (exact rational, no float)"
+    },
+    {
+      "case": "testC-c07",
+      "args": [
+        "diff",
+        "--coerce-at",
+        "/limits/*=decimal",
+        "testC/c07-left.yaml",
+        "testC/c07-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 1,
+      "indeterminate": [],
+      "note": "1.50 == 1.5"
+    },
+    {
+      "case": "testC-c08-counterexample",
+      "args": [
+        "diff",
+        "--coerce-at",
+        "/limits/*=quantity",
+        "testC/c08-left.yaml",
+        "testC/c08-right.yaml"
+      ],
+      "exit": 1,
+      "behavioral": 1,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "counterexample: 1Gi != 1000M (1024^3 != 1000^3) — must be reported"
+    },
+    {
+      "case": "testC-c09-ambiguous",
+      "args": [
+        "diff",
+        "--coerce-at",
+        "/limits/*=quantity",
+        "testC/c09-left.yaml",
+        "testC/c09-right.yaml"
+      ],
+      "exit": 2,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [
+        "ambiguous_unit_family"
+      ],
+      "note": "MB vs MiB is indeterminate, never silently equal"
+    },
+    {
+      "case": "testD-hcl",
+      "args": [
+        "diff",
+        "testD/a.hcl",
+        "testD/b.hcl"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "pending: HCL adapter lands in M5 (unevaluated expressions)"
+    },
+    {
+      "case": "testD-toml",
+      "args": [
+        "diff",
+        "testD/a.toml",
+        "testD/b.toml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "pending: TOML adapter lands in M5"
+    }
+  ]
+}

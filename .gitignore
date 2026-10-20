@@ -36,6 +36,7 @@ go.work.sum
 
 # 本地夹具与临时目录（golden 夹具入库，临时生成的不入）
 /tmp/
+/.tmp/
 /.cache/
 .venv/
 

@@ -1,0 +1,10 @@
+kind: Service
+metadata:
+  name: synth-svc
+spec:
+  type: LoadBalancer
+  selector:
+    app: synth-a
+  ports:
+    - port: 443
+      targetPort: 8080

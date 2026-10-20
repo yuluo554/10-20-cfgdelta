@@ -1,0 +1,11 @@
+# 行尾规范：源码与文档统一 LF（Windows 上生成的文件必须归一，否则 CI 的 cmp 会红）
+* text=auto eol=lf
+
+# 二进制产物：git 不得改动字节
+*.exe binary
+*.png binary
+
+# golden 夹具与基线留档的字节形态本身是被断言对象（期望输出逐字节比对）：
+# 一旦被 EOL 归一化，baseline 的 sha/内容对账就会失真。
+testdata/golden/** -text
+testdata/baseline/** -text

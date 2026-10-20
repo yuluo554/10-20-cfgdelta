@@ -1,0 +1,77 @@
+{
+  "name": "k8s/v1.29",
+  "k8s_version": "1.29",
+  "scope_note": "High-frequency defaulting subset only (10 rules); NOT a complete Kubernetes defaulting table. Unmatched paths are compared structurally and reported as degraded.",
+  "rules": [
+    {
+      "kind": "Deployment",
+      "path": "/spec/template/spec/containers/*/imagePullPolicy",
+      "default": "IfNotPresent",
+      "family": "string",
+      "source": "API Server defaulting: imagePullPolicy defaults to IfNotPresent when the tag is neither latest nor empty (K8s 1.29)"
+    },
+    {
+      "kind": "",
+      "path": "/spec/template/spec/containers/*/ports/*/protocol",
+      "default": "TCP",
+      "family": "string",
+      "source": "API Server defaulting: ContainerPort.protocol defaults to TCP (K8s 1.29)"
+    },
+    {
+      "kind": "Pod",
+      "path": "/spec/containers/*/ports/*/protocol",
+      "default": "TCP",
+      "family": "string",
+      "source": "API Server defaulting: ContainerPort.protocol defaults to TCP (K8s 1.29)"
+    },
+    {
+      "kind": "Deployment",
+      "path": "/spec/template/spec/terminationGracePeriodSeconds",
+      "default": "30",
+      "family": "int",
+      "source": "API Server defaulting: PodSpec.terminationGracePeriodSeconds defaults to 30 (K8s 1.29)"
+    },
+    {
+      "kind": "Deployment",
+      "path": "/spec/template/spec/restartPolicy",
+      "default": "Always",
+      "family": "string",
+      "source": "API Server defaulting: PodSpec.restartPolicy defaults to Always (K8s 1.29)"
+    },
+    {
+      "kind": "Deployment",
+      "path": "/spec/template/spec/dnsPolicy",
+      "default": "ClusterFirst",
+      "family": "string",
+      "source": "API Server defaulting: PodSpec.dnsPolicy defaults to ClusterFirst (K8s 1.29)"
+    },
+    {
+      "kind": "Deployment",
+      "path": "/spec/template/spec/serviceAccountName",
+      "default": "default",
+      "family": "string",
+      "source": "API Server defaulting: PodSpec.serviceAccountName defaults to 'default' (K8s 1.29)"
+    },
+    {
+      "kind": "Deployment",
+      "path": "/spec/revisionHistoryLimit",
+      "default": "10",
+      "family": "int",
+      "source": "API Server defaulting: DeploymentSpec.revisionHistoryLimit defaults to 10 (K8s 1.29)"
+    },
+    {
+      "kind": "Deployment",
+      "path": "/spec/strategy/type",
+      "default": "RollingUpdate",
+      "family": "string",
+      "source": "API Server defaulting: DeploymentStrategy.type defaults to RollingUpdate (K8s 1.29)"
+    },
+    {
+      "kind": "Deployment",
+      "path": "/spec/progressDeadlineSeconds",
+      "default": "600",
+      "family": "int",
+      "source": "API Server defaulting: DeploymentSpec.progressDeadlineSeconds defaults to 600 (K8s 1.29)"
+    }
+  ]
+}
