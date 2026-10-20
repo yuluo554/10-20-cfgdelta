@@ -8,6 +8,10 @@
 
 ### 1.1 DoD 对账（tag 前可验部分）
 
+> 本表按**写文件那一刻**的事实填。标 `⏳ tag 后` 的三行在 §二 有结论（§2.1 / §2.2 / §2.4），
+> 本表不回改——两栏纪律见 §2 开头。**例外**：本表曾把"代码面冻结"写成 ✅（写文件时只在
+> 心里算"不改 Go 代码"），tag 后实际改过 workflow 与测试断言，该行已按事实改写并指向 §2.7。
+
 | DoD 项 | 状态 | 证据（本轮实测） |
 |---|---|---|
 | `plan/RELEASE-M6.md` 在 tag 前落盘 | ✅ | 本文件；tag 指向的提交包含本文件（§1.7 记录被 tag 的 commit） |
@@ -17,9 +21,10 @@
 | 干净环境 clone 按 README 跑通 | ✅ | §1.6（`go build` → `selftest` 76 passed → 30 秒三连命令，全部贴实际输出） |
 | 脱敏扫描 0 命中 | ✅ | `node tools/check-desensitized.mjs` → 扫 231 个文本文件 0 命中；注入 3 处真命中后 exit 1 并逐行点名，删除后复绿 |
 | 本地全门绿 | ✅ | 布局门全绿 / `go vet ./...` 干净 / `go test -count=1 ./...` 全包 ok / `selftest` 76 passed 0 failed 0 skipped / 三件生成物 `--check` 全 exit 0 |
-| git tag `v0.1.0` | ⏳ tag 后 | §二 |
-| Release 附三平台产物 + `SHA256SUMS` | ⏳ tag 后 | §二 |
-| 本地留副本 + SHA256 可复验 | ⏳ tag 后 | §二 |
+| 代码面冻结（tag 后不改） | ⚠️ **部分** | **产品面**（`cmd/ internal/ data/ testdata/ go.mod go.sum`）相对 `v0.1.0` 零改动，实测 `git diff --stat v0.1.0 HEAD -- cmd internal data testdata go.mod go.sum` 为空；但 `.github/workflows/ci.yml` 与 `tests/invariants_test.go` 在 tag 后改过（发布流水线缺陷修正 + 判据补齐），原因与边界见 §2.7 |
+| git tag `v0.1.0` | ⏳ tag 后 | §2.1 |
+| Release 附三平台产物 + `SHA256SUMS` | ⏳ tag 后 | §2.2 |
+| 本地留副本 + SHA256 可复验 | ⏳ tag 后 | §2.4 |
 
 ### 1.2 发布产物清单（预期；实际附件以 §二 为准）
 
@@ -350,6 +355,34 @@ tag run（`39439782328`）里 macOS 一次就拿到 runner（24s），说明**�
 push 矩阵摘掉会让 tag 上才发现 macOS 构建问题——那需要移动已经发布的 tag，代价更大。
 记在这里，是为了让"某次 push 的 macOS job 红"不被误读成代码回归。
 
+### 2.7 「代码面冻结」的实际边界（如实）
+
+`plan/HANDOFF-M6 §三` 要求"tag 之后不改代码面"。tag 之后**确实改过两个非产品面文件**，
+逐条交代：
+
+| 文件 | tag 后改动 | 是否影响发布产物 |
+|---|---|---|
+| `.github/workflows/ci.yml` | 修 `publish` 的说明文件落点 + 幂等上传 + 回显 digest | **否**。产物由 `release-build` 产出，已随 tag run `39439782328` 构建完成并上传；workflow 不参与二进制字节 |
+| `tests/invariants_test.go` | `TestWorkflowParses` 从 3 job 断言扩到 5 job，并新增 4 条发布面判据 | **否**。这是测试断言，不进入二进制 |
+
+**产品面冻结的实测证据**（这才是"tag = 发布出去的源码"的实质保证）：
+
+```
+$ git diff --stat v0.1.0 HEAD -- cmd internal data testdata go.mod go.sum
+(无输出)
+$ cat VERSION && git tag -l v0.1.0
+0.1.0
+v0.1.0
+```
+
+即：归一化文法、序列三模式、RFC 6901、默认值语义与施加顺序、分类表、`unevaluated`
+语义、golden 76 例、profile JSON —— **相对 tag 一个字节都没动**。
+
+**为什么宁可留下这个偏差也不移动 tag**：`v0.1.0` 已经发布且附件被真下载复验过。
+移动已发布的 tag 会让"tag 指向的源码 ≠ 产出这些二进制的源码"从**可证明**退化成
+**不可证明**，代价远大于"tag 树里的 workflow 有一条已知缺陷（且已修在 main 上）"。
+所以选择：**tag 不动、缺陷公开、修在 main、留证据**。
+
 
 ## 三、覆盖对账
 
@@ -363,6 +396,6 @@ push 矩阵摘掉会让 tag 上才发现 macOS 构建问题——那需要移动
 | `plan/06 §一` ① | 源码仓库公开、署名 `yuluo554` | `github.com/yuluo554/10-20-cfgdelta`（public）；`go.mod` module path 同源 | ✅ |
 | `plan/06 §四` 缺口「CI 实跑」 | 首推实跑并确认绿 | §1.5（含首推失败与修正） | ✅ |
 | `plan/06 §四` 缺口「三平台二进制」 | 三平台原生构建 + 原生冒烟 | `release-build` 三 runner 原生构建 + 各自跑 `selftest`；§2.2 产物摘要 | ✅ |
-| `plan/HANDOFF-M6 §三` | 代码面冻结：tag 后不改代码面 | §1.7 记录末态提交；tag 后只追加 §二 与状态副本 | ✅ |
+| `plan/HANDOFF-M6 §三` | 代码面冻结：tag 后不改代码面 | 产品面 `git diff v0.1.0 HEAD -- cmd internal data testdata go.mod go.sum` 为空；非产品面（CI workflow / 测试断言）的改动与理由见 §2.7 | ⚠️ 产品面 ✅ / 非产品面有改动并已披露 |
 | `plan/00 §五` 纪律 | 未实测的不写成"实测"；未跑通不写"CI 绿" | §1.5 如实记录首推失败；§二 之前不写"已发布" | ✅ |
 | `plan/05 §四` 已知未验证项 | macOS/Linux 二进制 | 本机只有 windows/amd64；其余平台由 CI 原生构建（§1.2），本机不声称原生验证 | ✅ 口径一致 |
