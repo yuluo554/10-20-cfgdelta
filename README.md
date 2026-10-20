@@ -6,7 +6,7 @@
 
 It normalizes first (quantities, durations, numerics, YAML booleans), compares structure-independently (key order / indentation / quotes / comments are zero-noise), cancels Kubernetes API-server defaulting on **both** sides, and classifies what remains into five behavioural impact classes plus one cosmetic class that is only counted.
 
-> Status: **M5 classification gate + multi-format** (2026-10-20). The CLI, exit-code contract, parsers (YAML/JSON/TOML/INI/.env/HCL), normalization algebra, structural diff, defaulting profile (both-sides application, cancellation, degraded header), impact classification (six classes, semver sub-classes, gate semantics) and golden harness are in place and pass their tests. See `plan/05-里程碑与验收.md` for the milestone table.
+> Status: **v0.1.0 — M6 released** (2026-10-20). The CLI, exit-code contract, parsers (YAML/JSON/TOML/INI/.env/HCL), normalization algebra, structural diff, defaulting profile (both-sides application, cancellation, degraded header), impact classification (six classes, semver sub-classes, gate semantics) and golden harness are in place and pass their tests. Release binaries for three platforms plus `SHA256SUMS` are attached to the `v0.1.0` GitHub Release. See `plan/05-里程碑与验收.md` for the milestone table.
 
 ## Milestone status
 
@@ -18,7 +18,7 @@ It normalizes first (quantities, durations, numerics, YAML booleans), compares s
 | M3 | ✅ 完成（2026-10-20） | 结构无关比较：键序/缩进/引号/注释四类噪声零条目、序列三模式（ordered/set/keyed）、RFC 6901 路径转义；golden 45 例（43 pass / 2 显式 skip） |
 | M4 | ✅ 完成（2026-10-20） | 默认值双侧施加 + 抵消 + 未命中降级：测试A 4 → 0（`testA-profile` exit 0，cosmetic 2）；显式非默认仍报（`testA-ctrl-profile` exit 1）；10 条规则逐条 golden；`testM4` 21 例；golden 66 例（64 pass / 2 显式 skip） |
 | M5 | ✅ 完成（2026-10-20） | 分类门禁 + 多格式：六类各一例端到端、semver 四例；TOML/INI/.env/HCL 按扩展名分派；HCL 表达式 `unevaluated_expression`；测试B 在 `keyed:name` 下 0 行为差异；golden 76 例（76 pass / 0 skip）；首屏对照截图落盘 |
-| M6 | ⬜ 未开始 | 发布三件套 |
+| M6 | ✅ 完成（2026-10-20） | 发布三件套：tag `v0.1.0` + GitHub Release（三平台二进制 + `SHA256SUMS`）+ `plan/RELEASE-M6.md` |
 
 This status line describes **version + capability only**. Whether the repository is actually published, and whether CI is green, live on the Releases page and in `plan/` — a README in a tarball should not be the first-hand source for release state.
 

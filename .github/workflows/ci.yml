@@ -181,25 +181,41 @@ jobs:
           ls -l
           sha256sum cfgdelta-* > SHA256SUMS
           cat SHA256SUMS
+          # Notes live at the workspace root, NOT under dist/ — the next step runs
+          # from the repo root and would otherwise fail with
+          # "open RELEASE_NOTES.md: no such file or directory" (hit on v0.1.0).
+          notes="$GITHUB_WORKSPACE/RELEASE_NOTES.md"
           {
             printf 'cfgdelta %s — behavioural config diff (normalization layer + impact classification layer).\n\n' "${GITHUB_REF_NAME#v}"
             printf 'Single static binary, zero runtime dependencies, no external commands.\n\n'
             printf 'Native builds: linux/amd64, darwin/arm64, windows/amd64.\n'
             printf 'Verify the downloads: sha256sum -c SHA256SUMS\n\n'
             printf 'The golden suite (76 cases) runs offline: cfgdelta selftest\n'
-          } > RELEASE_NOTES.md
+          } > "$notes"
+          test -s "$notes"
       - name: "Create GitHub Release"
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh release create "$GITHUB_REF_NAME" \
-            dist/cfgdelta-linux-amd64 \
-            dist/cfgdelta-darwin-arm64 \
-            dist/cfgdelta-windows-amd64.exe \
-            dist/SHA256SUMS \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "cfgdelta ${GITHUB_REF_NAME#v}" \
-            --notes-file RELEASE_NOTES.md \
-            --verify-tag
+          assets=(
+            dist/cfgdelta-linux-amd64
+            dist/cfgdelta-darwin-arm64
+            dist/cfgdelta-windows-amd64.exe
+            dist/SHA256SUMS
+          )
+          # Idempotent: a re-run after a partial failure must not fail on
+          # "release already exists" — it uploads over the existing release.
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "${assets[@]}" \
+              --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "cfgdelta ${GITHUB_REF_NAME#v}" \
+              --notes-file RELEASE_NOTES.md \
+              --verify-tag
+          fi
+          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json assets \
+            --jq '.assets[] | "\(.name)  \(.size)  \(.digest)"'

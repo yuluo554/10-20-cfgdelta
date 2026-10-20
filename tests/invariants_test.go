@@ -239,6 +239,24 @@ func TestWorkflowParses(t *testing.T) {
 		}
 	}
 
+	// 发布说明文件的落点：`Checksums + manifest` 步骤先 `cd dist`，而 `Create GitHub
+	// Release` 步骤在仓库根跑。两个步骤共用同一个相对路径就是 v0.1.0 上真实发生的
+	// `open RELEASE_NOTES.md: no such file or directory`。判据：说明文件必须写到
+	// 绝对路径（$GITHUB_WORKSPACE），且 publish 里不得出现裸相对重定向。
+	// 变异验证：把 `"$notes"` 改回 `RELEASE_NOTES.md` → 本测试必须红。
+	if !strings.Contains(publishRuns.String(), "GITHUB_WORKSPACE/RELEASE_NOTES.md") {
+		t.Fatal("publish never anchors RELEASE_NOTES.md to $GITHUB_WORKSPACE — a step that cd'd into dist/ would strand it")
+	}
+	if strings.Contains(publishRuns.String(), "> RELEASE_NOTES.md") {
+		t.Fatal("publish writes RELEASE_NOTES.md at a bare relative path — that path is cwd-dependent and already broke one release")
+	}
+
+	// 重跑必须幂等：tag 上第一次失败后重跑不得因 "release already exists" 再红。
+	if !strings.Contains(publishRuns.String(), "gh release upload") ||
+		!strings.Contains(publishRuns.String(), "--clobber") {
+		t.Fatal("publish is not idempotent — a re-run on the same tag would fail on an existing release")
+	}
+
 	total := 0
 	for name, job := range doc.Jobs {
 		total += len(job.Steps)
