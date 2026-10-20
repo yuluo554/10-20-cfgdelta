@@ -1,0 +1,7 @@
+list:
+  - alpha
+  - beta
+env:
+  zone: east
+  tier: backend
+release: alpha

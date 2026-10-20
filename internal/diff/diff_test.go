@@ -125,6 +125,31 @@ func TestPathEscaping(t *testing.T) {
 	}
 }
 
+// set 模式路径是**成员标识**（pointer[quoted canonical key]），不是 JSON Pointer：
+// canonical key 可能含 `]` / `"`，裸拼会截断，所以整段必须被引号包裹。
+func TestSetMemberPathIsQuotedIdentity(t *testing.T) {
+	left := "items:\n  - alpha\n  - beta\n"
+	right := "items:\n  - alpha\n  - beta\n  - charlie\n"
+	res := compare(t, left, right, Options{Seq: SeqMode{Kind: "set"}})
+	if len(res.Entries) != 1 || res.Entries[0].Kind != Added {
+		t.Fatalf("want one added entry, got %+v", res.Entries)
+	}
+	if got, want := res.Entries[0].Path, `/items["string:charlie"]`; got != want {
+		t.Fatalf("path = %q, want %q", got, want)
+	}
+
+	// 元素自带 `]`：引号外的裸拼接会被误读成路径结束，这里必须保持完整。
+	left = "items:\n  - alpha\n"
+	right = "items:\n  - alpha\n  - alpha]beta\n"
+	res = compare(t, left, right, Options{Seq: SeqMode{Kind: "set"}})
+	if len(res.Entries) != 1 {
+		t.Fatalf("want one added entry, got %+v", res.Entries)
+	}
+	if got, want := res.Entries[0].Path, `/items["string:alpha]beta"]`; got != want {
+		t.Fatalf("path with embedded ']' = %q, want %q", got, want)
+	}
+}
+
 // 归一后相等 → CosmeticKind，**不是** Changed（纯书写只计数）。
 func TestNormalizedEqualIsCosmetic(t *testing.T) {
 	res := compare(t, "m: 1Gi\n", "m: 1024Mi\n", Options{

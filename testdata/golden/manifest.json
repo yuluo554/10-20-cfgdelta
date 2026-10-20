@@ -1,6 +1,6 @@
 {
   "generated_by": "tools/gen-golden-manifest.mjs",
-  "scope_note": "Covers the four red-teamed families (A/B/C/D), the 10 defaulting rules in data/profiles/k8s/v1.29.json, and the §4.1/§4.2 grammar boundaries. NOT full Kubernetes semantics.",
+  "scope_note": "Covers the four red-teamed families (A/B/C/D), the 10 defaulting rules in data/profiles/k8s/v1.29.json, the §4.1/§4.2 grammar boundaries, and the M3 structural-comparison cases (four noise classes / sequence modes / RFC 6901 paths). NOT full Kubernetes semantics.",
   "cases": [
     {
       "case": "classify-exposure",
@@ -499,6 +499,165 @@
       "cosmetic": 0,
       "indeterminate": [],
       "note": "pending: TOML adapter lands in M5"
+    },
+    {
+      "case": "testM3-keyed-duplicate",
+      "args": [
+        "diff",
+        "--seq-mode",
+        "keyed:name",
+        "testM3/keyed-dup-left.yaml",
+        "testM3/keyed-dup-right.yaml"
+      ],
+      "exit": 3,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "contains": [
+        "duplicate key \"alpha\"",
+        "at /items/1"
+      ],
+      "note": "duplicate keyed field is exit 3 (never first-wins) and names the offending path"
+    },
+    {
+      "case": "testM3-keyed-order",
+      "args": [
+        "diff",
+        "--seq-mode",
+        "keyed:name",
+        "testM3/keyed-order-left.yaml",
+        "testM3/keyed-order-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "keyed:name aligns by field value: element order is irrelevant"
+    },
+    {
+      "case": "testM3-noise-comments",
+      "args": [
+        "diff",
+        "testM3/noise-base-left.yaml",
+        "testM3/noise-comments-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "contains": [
+        "comments: not compared"
+      ],
+      "note": "comments are dropped at parse time and never compared"
+    },
+    {
+      "case": "testM3-noise-indent",
+      "args": [
+        "diff",
+        "testM3/noise-base-left.yaml",
+        "testM3/noise-indent-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "block indentation is presentation only"
+    },
+    {
+      "case": "testM3-noise-keys",
+      "args": [
+        "diff",
+        "testM3/noise-base-left.yaml",
+        "testM3/noise-keys-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "mapping key order is irrelevant: keys compare in UTF-8 byte order"
+    },
+    {
+      "case": "testM3-noise-quotes",
+      "args": [
+        "diff",
+        "testM3/noise-base-left.yaml",
+        "testM3/noise-quotes-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "quote style is presentation only (plain / double / single all carry the same Raw and tag)"
+    },
+    {
+      "case": "testM3-rfc6901-escape",
+      "args": [
+        "diff",
+        "testM3/escape-left.yaml",
+        "testM3/escape-right.yaml"
+      ],
+      "exit": 1,
+      "behavioral": 2,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "contains": [
+        "~ /a~1b",
+        "~ /c~0d"
+      ],
+      "note": "keys containing / and ~ are escaped per RFC 6901"
+    },
+    {
+      "case": "testM3-set-duplicate",
+      "args": [
+        "diff",
+        "--seq-mode",
+        "set",
+        "testM3/set-reorder-left.yaml",
+        "testM3/set-dup-right.yaml"
+      ],
+      "exit": 2,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [
+        "duplicate_in_set"
+      ],
+      "contains": [
+        "indeterminate(duplicate_in_set)"
+      ],
+      "note": "duplicate set elements are indeterminate, never silently deduped"
+    },
+    {
+      "case": "testM3-set-member-path",
+      "args": [
+        "diff",
+        "--seq-mode",
+        "set",
+        "testM3/set-reorder-left.yaml",
+        "testM3/set-add-right.yaml"
+      ],
+      "exit": 1,
+      "behavioral": 1,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "contains": [
+        "/items[\"string:charlie\"]"
+      ],
+      "note": "set member identity is pointer[quoted canonical key], not a JSON Pointer segment"
+    },
+    {
+      "case": "testM3-set-reorder",
+      "args": [
+        "diff",
+        "--seq-mode",
+        "set",
+        "testM3/set-reorder-left.yaml",
+        "testM3/set-reorder-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "set membership ignores order: 0 entries"
     }
   ]
 }

@@ -6,7 +6,7 @@
 
 It normalizes first (quantities, durations, numerics, YAML booleans), compares structure-independently (key order / indentation / quotes / comments are zero-noise), cancels Kubernetes API-server defaulting on **both** sides, and classifies what remains into five behavioural impact classes plus one cosmetic class that is only counted.
 
-> Status: **M2 normalization** (2026-10-20). The CLI, exit-code contract, parsers, normalization algebra, structural diff, defaulting profile, classification and golden harness are in place and pass their tests. TOML/INI/.env/HCL adapters land in M5. See `plan/05-里程碑与验收.md` for the milestone table.
+> Status: **M3 structural comparison** (2026-10-20). The CLI, exit-code contract, parsers, normalization algebra, structural diff, defaulting profile, classification and golden harness are in place and pass their tests. TOML/INI/.env/HCL adapters land in M5. See `plan/05-里程碑与验收.md` for the milestone table.
 
 ## Milestone status
 
@@ -15,7 +15,7 @@ It normalizes first (quantities, durations, numerics, YAML booleans), compares s
 | M0 | ✅ 完成（2026-10-20） | 骨架 + 装订 + 布局门 + CI（本地等价校验，未接远端） |
 | M1 | ✅ 完成（2026-10-20） | golden 29 例 + 三家基线留档（40 个原样 `.out`）+ 10 条默认值逐条核对到上游源码 |
 | M2 | ✅ 完成（2026-10-20） | normalize 引擎：测试C 七组全等、`1Gi≠1000M` 反例、`MB/MiB` indeterminate、浮点静态门、双跑字节一致；golden 35 例（33 pass / 2 显式 skip） |
-| M3 | ⬜ 未开始 | 结构比较深化 |
+| M3 | ✅ 完成（2026-10-20） | 结构无关比较：键序/缩进/引号/注释四类噪声零条目、序列三模式（ordered/set/keyed）、RFC 6901 路径转义；golden 45 例（43 pass / 2 显式 skip） |
 | M4 | ⬜ 未开始 | 默认值表扩充与降级标注 |
 | M5 | ⬜ 未开始 | 多格式适配器 + 首屏截图 |
 | M6 | ⬜ 未开始 | 发布三件套 |

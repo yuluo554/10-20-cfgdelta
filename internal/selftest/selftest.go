@@ -17,6 +17,10 @@ import (
 )
 
 // Case 是 manifest.json 中的一条用例（真值只存输入与期望，K-08）。
+//
+// Contains 是可选的**输出面**断言：退出码相同、计数也相同，仍可能把路径打错
+// （例如 set 模式的成员标识、RFC 6901 转义、keyed 重复键的定位）。只对期望成立
+// 的字面串断言，不存整段观测输出。
 type Case struct {
 	Case          string   `json:"case"`
 	Args          []string `json:"args"`
@@ -24,6 +28,7 @@ type Case struct {
 	Behavioral    int      `json:"behavioral"`
 	Cosmetic      int      `json:"cosmetic"`
 	Indeterminate []string `json:"indeterminate"`
+	Contains      []string `json:"contains,omitempty"`
 	Note          string   `json:"note,omitempty"`
 }
 
@@ -123,6 +128,15 @@ func Run(stdout, stderr io.Writer, root string, args []string) exitcode.Code {
 			}
 			continue
 		}
+		// 输出面断言：路径转义 / 集合成员标识 / 重复键定位这类事实，计数对账看不出来。
+		if reason, bad := checkContains(c, out); bad {
+			fail++
+			fmt.Fprintf(stdout, "FAIL  %s  exit ok (%d) but %s\n", c.Case, code, reason)
+			if verbose {
+				fmt.Fprintf(stdout, "      args: %v\n      out: %s\n", c.Args, strings.TrimSpace(out))
+			}
+			continue
+		}
 		pass++
 		if verbose {
 			fmt.Fprintf(stdout, "PASS  %s  exit %d\n", c.Case, code)
@@ -169,6 +183,18 @@ func checkSummary(c Case, out string) (string, bool) {
 	}
 	if got.indeterminate != len(c.Indeterminate) {
 		return fmt.Sprintf("indeterminate=%d want %d (%s)", got.indeterminate, len(c.Indeterminate), strings.TrimSpace(line)), true
+	}
+	return "", false
+}
+
+// checkContains 逐条断言输出里出现期望片段（stdout 与 stderr 已由 runner 合并）。
+//
+// 规则：manifest 没写 contains → 不适用；写了 → 每一条都必须出现。
+func checkContains(c Case, out string) (string, bool) {
+	for _, want := range c.Contains {
+		if !strings.Contains(out, want) {
+			return fmt.Sprintf("output does not contain %q", want), true
+		}
 	}
 	return "", false
 }

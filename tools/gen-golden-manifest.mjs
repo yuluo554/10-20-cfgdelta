@@ -31,8 +31,9 @@ function rel(p) {
   return relative(GOLDEN, p).split("\\").join("/");
 }
 
-function addCase(name, args, exit, behavioral, cosmetic, indeterminate = [], note = undefined) {
+function addCase(name, args, exit, behavioral, cosmetic, indeterminate = [], note = undefined, contains = []) {
   const c = { case: name, args, exit, behavioral, cosmetic, indeterminate };
+  if (contains.length) c.contains = contains;
   if (note) c.note = note;
   cases.push(c);
 }
@@ -187,6 +188,80 @@ addCase(
   "0 == 0s (bare zero is the only unit-less duration)",
 );
 
+// ── M3 结构无关比较：四类噪声 / 序列三模式 / 路径形态 ────────────────────────
+// 真值由文法推导：这四类差异只影响书写，不改变任何标量的 Raw 与 tag。
+const noiseCases = [
+  ["keys", "mapping key order is irrelevant: keys compare in UTF-8 byte order"],
+  ["indent", "block indentation is presentation only"],
+  [
+    "quotes",
+    "quote style is presentation only (plain / double / single all carry the same Raw and tag)",
+  ],
+  ["comments", "comments are dropped at parse time and never compared"],
+];
+for (const [suffix, note] of noiseCases) {
+  // 注释用例额外断言头部声明，避免"没比注释"这件事只存在于文档里。
+  const contains = suffix === "comments" ? ["comments: not compared"] : [];
+  addCase(
+    `testM3-noise-${suffix}`,
+    ["diff", "testM3/noise-base-left.yaml", `testM3/noise-${suffix}-right.yaml`],
+    0,
+    0,
+    0,
+    [],
+    note,
+    contains,
+  );
+}
+
+// set：顺序无关；重复元素是一等 indeterminate（不静默去重）。
+addCase(
+  "testM3-set-reorder",
+  ["diff", "--seq-mode", "set", "testM3/set-reorder-left.yaml", "testM3/set-reorder-right.yaml"],
+  0, 0, 0, [],
+  "set membership ignores order: 0 entries",
+);
+addCase(
+  "testM3-set-duplicate",
+  ["diff", "--seq-mode", "set", "testM3/set-reorder-left.yaml", "testM3/set-dup-right.yaml"],
+  2, 0, 0,
+  ["duplicate_in_set"],
+  "duplicate set elements are indeterminate, never silently deduped",
+  ["indeterminate(duplicate_in_set)"],
+);
+// set 成员没有稳定下标，路径形态 = pointer[quoted canonical key]（成员标识，非 JSON Pointer）。
+addCase(
+  "testM3-set-member-path",
+  ["diff", "--seq-mode", "set", "testM3/set-reorder-left.yaml", "testM3/set-add-right.yaml"],
+  1, 1, 0, [],
+  "set member identity is pointer[quoted canonical key], not a JSON Pointer segment",
+  ['/items["string:charlie"]'],
+);
+
+// keyed: 按字段对齐（元素顺序无关）；重复键 = exit 3 且输出带定位路径。
+addCase(
+  "testM3-keyed-order",
+  ["diff", "--seq-mode", "keyed:name", "testM3/keyed-order-left.yaml", "testM3/keyed-order-right.yaml"],
+  0, 0, 0, [],
+  "keyed:name aligns by field value: element order is irrelevant",
+);
+addCase(
+  "testM3-keyed-duplicate",
+  ["diff", "--seq-mode", "keyed:name", "testM3/keyed-dup-left.yaml", "testM3/keyed-dup-right.yaml"],
+  3, 0, 0, [],
+  "duplicate keyed field is exit 3 (never first-wins) and names the offending path",
+  ['duplicate key "alpha"', "at /items/1"],
+);
+
+// RFC 6901：键内 `/` 与 `~` 必须转义成 `~1` / `~0`。
+addCase(
+  "testM3-rfc6901-escape",
+  ["diff", "testM3/escape-left.yaml", "testM3/escape-right.yaml"],
+  1, 2, 0, [],
+  "keys containing / and ~ are escaped per RFC 6901",
+  ["~ /a~1b", "~ /c~0d"],
+);
+
 // ── 分类与门禁（五类各一例 + 选择性阻断）────────────────────────────────────
 addCase(
   "classify-resource-shrink",
@@ -283,7 +358,7 @@ if (orphans.length > 0) {
 const manifest = {
   generated_by: "tools/gen-golden-manifest.mjs",
   scope_note:
-    "Covers the four red-teamed families (A/B/C/D), the 10 defaulting rules in data/profiles/k8s/v1.29.json, and the §4.1/§4.2 grammar boundaries. NOT full Kubernetes semantics.",
+    "Covers the four red-teamed families (A/B/C/D), the 10 defaulting rules in data/profiles/k8s/v1.29.json, the §4.1/§4.2 grammar boundaries, and the M3 structural-comparison cases (four noise classes / sequence modes / RFC 6901 paths). NOT full Kubernetes semantics.",
   cases: cases.sort((a, b) => (a.case < b.case ? -1 : a.case > b.case ? 1 : 0)),
 };
 

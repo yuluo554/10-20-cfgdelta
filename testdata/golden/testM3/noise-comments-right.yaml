@@ -1,0 +1,10 @@
+# leading comment (must not be compared)
+release: alpha   # trailing comment
+env:
+  # inner comment
+  tier: backend
+  zone: east
+list:
+  - alpha
+  - beta
+# trailing file comment

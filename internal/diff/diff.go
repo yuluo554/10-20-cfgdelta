@@ -157,6 +157,8 @@ func compareOrdered(p string, l, r *doc.Node, opt Options, res *Result) error {
 
 func compareSet(p string, l, r *doc.Node, opt Options, res *Result) error {
 	// 元素按规范化后的字节序排序后比对（§4.10）；顺序差异不产生条目。
+	// 差异条目的路径是 p+"["+元素规范键+"]" —— 这是**集合成员标识**，不是
+	// JSON Pointer 段（见 setMemberPath）：set 元素没有稳定下标。
 	lk, ldup, err := sortedElementKeys(p, l, opt)
 	if err != nil {
 		return err
@@ -181,12 +183,24 @@ func compareSet(p string, l, r *doc.Node, opt Options, res *Result) error {
 	for _, k := range unionSorted(keysOf(lset), keysOf(rset)) {
 		switch {
 		case !lset[k] && rset[k]:
-			res.Entries = append(res.Entries, Entry{Path: p + "[" + k + "]", Kind: Added})
+			res.Entries = append(res.Entries, Entry{Path: setMemberPath(p, k), Kind: Added})
 		case lset[k] && !rset[k]:
-			res.Entries = append(res.Entries, Entry{Path: p + "[" + k + "]", Kind: Removed})
+			res.Entries = append(res.Entries, Entry{Path: setMemberPath(p, k), Kind: Removed})
 		}
 	}
 	return nil
+}
+
+// setMemberPath 产出 set 模式的**成员标识**，不是 JSON Pointer 段。
+//
+// set 的元素在定义上没有稳定下标（顺序无关），所以用元素的规范键（canonicalKey）
+// 当身份。规范键本身常含 `{`/`[`/`]`/`"`，裸拼会让 `]` 提前截断、边界不可解析，
+// 因此整段用 strconv.Quote 包一层：`/items["string:charlie"]`。
+//
+// 纪律：该形态**不可**再喂回 `--at`（--at 只认对象键与数组下标）；需要定位时
+// 用不等长的两侧原文重跑，或按成员内容检索。写死在这里，别再发明第二种形态。
+func setMemberPath(p, key string) string {
+	return p + "[" + strconv.Quote(key) + "]"
 }
 
 func compareKeyed(p string, l, r *doc.Node, opt Options, res *Result) error {
