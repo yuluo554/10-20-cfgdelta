@@ -20,6 +20,16 @@ M0（装订 + 骨架）已完成。全部证据均为**本轮实测输出**，�
 | 生成器三件 `--check` | ✅ | `sync-version` / `sync-profiles` / `gen-golden-manifest` 均 exit 0 |
 | CI workflow | 🟡 | 本地 `yaml.safe_load` 解析通过（3 jobs / 18 steps），**未推送 = 未跑 CI** |
 
+**干净 clone 复核抓出的三个缺陷（已修，全部有回归测试）**——这一族只有真 clone 才会暴露：
+
+| # | 形态 | 症状 | 修法 / 回归 |
+|---|---|---|---|
+| ① | **Git Bash / MSYS2 静默改写参数** | README 写 `--at /limits/memory`，MSYS 把它转成 `D:/program/Git/limits/memory` → `matched no node`（工作树里也复现，但只有照 README 逐字敲才发现） | 前导 `/` 可省略；识别被改写形态并给出解释性错误（不静默失败）。`TestAtPathLeadingSlashOptional` / `TestShellRewrittenPathIsExplained` |
+| ② | `--flag=value` 形态不被接受 | `--at=/limits/memory` 报 `unknown flag` | `normalize` 与 `diff`/`classify`/`gate` 全部支持两种形态。`TestEqualsFlagForm` |
+| ③ | `--strict` 没生效 | `foobar` vs `100%` 在 `--strict` 下仍 rc=1（§4.7 要求 rc=2） | `InferFamilyDetailed` 返回 `fallback`，只升级"string 兜底 + 书写不同"那一类；显式字符串与百分比不升级。`TestStrictUpgradesOnlyUnknownFallback` |
+
+**新增守门**：`tests/readme_commands_test.go` 把 README 每条 `cfgdelta` 命令做 **parser 反射对账** + 夹具存在性检查（占位符显式豁免）。变异验证：给 README 注入 `--show-kind=added` → 必红。
+
 **已知偏差（必须如实带到下一棒）**：
 - M1 只完成了「golden 夹具 + 10 条默认值 profile」这两半；**三家基线留档（`testdata/baseline/`）尚未落盘**——本机没有安装 dyff / diffyml / confdiff。M1 因此记 🟡 而非 ✅。
 - 本机没有 `go` 在 PATH；SDK 解压在用户目录下的 `go-sdk/go`（**在仓库外**，不入库）。每棒开始需自行设置 PATH。
@@ -36,6 +46,8 @@ M0（装订 + 骨架）已完成。全部证据均为**本轮实测输出**，�
 8. **`VERSION` 与 `internal/version/VERSION` 必须同步**（`node tools/sync-version.mjs`）。
 9. **CI 的 `test` job 用 `bash` + `set +e` + 显式断言退出码**：`selftest` 里刻意让某些用例非 0，`set -e` 会在检出问题处提前中断。
 10. **`plan/05` 的排期表与状态表都以 `| M1 |` 起行**——布局门的 `LAYOUT.STATUS` 只扫「含『里程碑』与『状态』的表头」下方那张表。若给其它表加同样的表头，会被纳入状态比对。
+11. **路径参数写成不带前导 `/` 的形态**（`--at limits/memory`、`--coerce-at "limits/*=quantity"`）。两种写法都支持，但 MSYS 改写会先于程序发生，README 与 golden manifest 已统一用无前导斜杠形态——**别"好心"把它改回带斜杠**，那会让 Git Bash 用户复现不了。
+12. **`--strict` 只升级"走了 string 兜底且两侧书写不同"的路径**。改成"只要族是 string 就升级"会打挂 `TestStrictUpgradesOnlyUnknownFallback` 的第二、三段（引号字符串 / 百分比不该变吵）。
 
 ## 三、下一棒（M1 数据先行）待办
 
