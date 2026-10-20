@@ -149,3 +149,40 @@ func TestCounterexampleIsChanged(t *testing.T) {
 		t.Fatalf("1Gi vs 1000M must be a real change, got %+v", res.Entries)
 	}
 }
+
+// --strict 把"未知族 + 书写不同"升级为 indeterminate(unknown_family)（§4.7）；
+// 不升级显式声明的字符串（引号包裹 / 百分比），否则工具会变吵（风险③）。
+func TestStrictUpgradesOnlyUnknownFallback(t *testing.T) {
+	opt := Options{Seq: SeqMode{Kind: "ordered"}, Strict: true}
+
+	res := compare(t, "weird: foobar\n", "weird: 100%\n", opt)
+	if !res.HasIndeterminate || len(res.Entries) != 1 {
+		t.Fatalf("strict must upgrade an unknown-family change, got %+v", res.Entries)
+	}
+	if res.Entries[0].Reason != value.ReasonUnknownFamily {
+		t.Fatalf("reason = %q, want %q", res.Entries[0].Reason, value.ReasonUnknownFamily)
+	}
+
+	// 引号包裹的字符串是**已声明**的族，不升级。
+	res = compare(t, `note: "alpha"`+"\n", `note: "beta"`+"\n", opt)
+	if res.HasIndeterminate {
+		t.Fatalf("explicitly quoted strings must not be upgraded, got %+v", res.Entries)
+	}
+
+	// 百分比默认是字符串族，也不升级。
+	res = compare(t, "ratio: 10%\n", "ratio: 20%\n", opt)
+	if res.HasIndeterminate {
+		t.Fatalf("percentages are strings by default and must not be upgraded, got %+v", res.Entries)
+	}
+}
+
+// 非 strict 下未知族按原样比较（默认不吵）。
+func TestNonStrictComparesUnknownAsIs(t *testing.T) {
+	res := compare(t, "weird: foobar\n", "weird: 100%\n", Options{Seq: SeqMode{Kind: "ordered"}})
+	if res.HasIndeterminate {
+		t.Fatalf("non-strict must not produce indeterminate, got %+v", res.Entries)
+	}
+	if len(res.Entries) != 1 || res.Entries[0].Kind != Changed {
+		t.Fatalf("want one changed entry, got %+v", res.Entries)
+	}
+}

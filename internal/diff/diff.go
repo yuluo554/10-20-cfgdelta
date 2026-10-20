@@ -241,6 +241,21 @@ func compareScalar(p string, l, r *doc.Node, opt Options, res *Result) error {
 	lfam := familyFor(p, l, opt)
 	rfam := familyFor(p, r, opt)
 
+	// --strict：未知族的**书写不同**升级为 indeterminate（§4.7）。
+	// 判据落在"是否走了 string 兜底"上，不落在"族名是不是 string"上——
+	// 显式声明的字符串（引号包裹、百分比）不该被升级，否则工具会变得吵（风险③）。
+	if opt.Strict && l != nil && r != nil && l.Raw != r.Raw {
+		_, lFallback := value.InferFamilyDetailed(l, p)
+		_, rFallback := value.InferFamilyDetailed(r, p)
+		if (lFallback && lfam == value.FamilyString) || (rFallback && rfam == value.FamilyString) {
+			res.Entries = append(res.Entries, Entry{
+				Path: p, Kind: IndeterminateKind, Reason: value.ReasonUnknownFamily,
+			})
+			res.HasIndeterminate = true
+			return nil
+		}
+	}
+
 	lc, lerr := value.Normalize(l, p, lfam, opt.Strict)
 	rc, rerr := value.Normalize(r, p, rfam, opt.Strict)
 

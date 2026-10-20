@@ -81,30 +81,40 @@ func globSegmentMatch(pattern, p string) bool {
 // 路径上下文（唯一实现处）：只有 resources.limits / resources.requests 下的裸数字才默认
 // quantity —— 这是防止 `image.tag: 1.25` 被当成数字的关键（测试B 第 2 项）。
 func InferFamily(n *doc.Node, jsonPointer string) Family {
+	fam, _ := InferFamilyDetailed(n, jsonPointer)
+	return fam
+}
+
+// InferFamilyDetailed 额外返回 `fallback`：true 表示该值**没有命中任何已声明的族**，
+// 只是按"其余 → string"兜底（plan/03 §二 第 5 步）。
+//
+// `--strict` 只用 fallback 那一类升级为 indeterminate(unknown_family)（第 6 步）——
+// 显式声明的字符串（引号包裹、百分比）**不**升级，否则工具会变得吵（风险③）。
+func InferFamilyDetailed(n *doc.Node, jsonPointer string) (fam Family, fallback bool) {
 	if n == nil {
-		return FamilyNull
+		return FamilyNull, false
 	}
 	if n.Tag == "!!alias" {
-		return FamilyUnknown
+		return FamilyUnknown, false
 	}
 	if n.Tag == "!!null" {
-		return FamilyNull
+		return FamilyNull, false
 	}
 	if n.Tag == "!!bool" {
-		return FamilyBool
+		return FamilyBool, false
 	}
 	if n.Kind != doc.Scalar {
-		return FamilyUnknown
+		return FamilyUnknown, false
 	}
 	raw := strings.TrimSpace(n.Raw)
 	if raw == "" {
-		return FamilyString
+		return FamilyString, false
 	}
 
 	// YAML 1.1 布尔族只对 plain 标量生效（§4.4）；引号包裹的 "true" 是字符串。
 	if !n.IsQuoted() {
 		if _, ok := LookupYAML11Bool(raw); ok {
-			return FamilyBool
+			return FamilyBool, false
 		}
 	}
 	if n.IsQuoted() {
@@ -112,39 +122,40 @@ func InferFamily(n *doc.Node, jsonPointer string) Family {
 		// `image.tag: "1.25"` vs `1.25` 相同）。但布尔与百分比例外：
 		// `"true"` 仍是字符串（§4.4），`"50%"` 仍是字符串（§4.6）。
 		if isPlainNumeric(raw) {
-			return FamilyDecimal
+			return FamilyDecimal, false
 		}
-		return FamilyString
+		return FamilyString, false
 	}
 	if strings.HasSuffix(raw, "%") {
 		// 百分比默认当字符串（§4.6），只有显式声明才换算。
-		return FamilyString
+		return FamilyString, false
 	}
 	// K8s 资源上下文优先判 quantity：`500m` 在 limits/requests 里是 0.5，
 	// 不是 Go duration 的"500 分钟"。这条顺序是文法的消歧点（§4.1 vs §4.2）。
 	if inResourceContext(jsonPointer) && LooksLikeQuantity(raw) {
-		return FamilyQuantity
+		return FamilyQuantity, false
 	}
 	if LooksLikeDuration(raw) {
-		return FamilyDuration
+		return FamilyDuration, false
 	}
 	if isAmbiguousByteUnit(raw) {
 		// 歧义字节单位（MB/MiB）：走 quantity 路径，由 ParseQuantity 产出
 		// indeterminate(ambiguous_unit_family)，**绝不静默判相等**（§4.7）。
-		return FamilyQuantity
+		return FamilyQuantity, false
 	}
 	if LooksLikeQuantity(raw) {
 		// 裸数字与指数式（1e3）在语义上属于"十进制数值"（§4.3）；
 		// 只有 resources 上下文里的裸数字才默认 quantity。
 		if !hasQuantitySuffix(raw) {
 			if inResourceContext(jsonPointer) {
-				return FamilyQuantity
+				return FamilyQuantity, false
 			}
-			return FamilyDecimal
+			return FamilyDecimal, false
 		}
-		return FamilyQuantity
+		return FamilyQuantity, false
 	}
-	return FamilyString
+	// 其余 → string 兜底；`--strict` 会把"两侧书写不同"的这一类升级为 indeterminate。
+	return FamilyString, true
 }
 
 // hasQuantitySuffix 判定是否带非空后缀（含指数式之外的 Ki/Mi/500m 等）。
