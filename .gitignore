@@ -32,6 +32,7 @@ go.work.sum
 
 # ---- 题面约定 ----
 # 发布产物（Release 附件本地留副本在 dist-release/，压缩包不入库）
+/dist-release/
 *.zip
 *.tar.gz
 *.tar.xz

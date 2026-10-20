@@ -100,8 +100,8 @@ M3（结构比较）已完成。下表全部是**本轮实测输出**，不是�
 
 | 事实（实测日期 2026-10-20） | 后果 / 处置 |
 |---|---|
-| `go` 不在 PATH；SDK 在仓库外 `C:\Users\ASUS\go-sdk\go`（`.tmp/sdk/go` **不存在**） | **本轮实测 shell 里 `$USER` 为空**，`export PATH="/c/$USER/go-sdk/go/bin:$PATH"` 会失败；直接写 `/c/Users/ASUS/go-sdk/go/bin` |
-| `raw.githubusercontent.com` 直连 SSL 失败（curl 35）；`127.0.0.1:7897` 代理也不通 | 取上游源码走 `api.github.com` contents API（`Accept: application/vnd.github.raw`） |
+| `go` 不在 PATH；SDK 在仓库外 `C:\Users\<user>\go-sdk\go`（`.tmp/sdk/go` **不存在**） | **本轮实测 shell 里 `$USER` 为空**，`export PATH="/c/$USER/go-sdk/go/bin:$PATH"` 会失败；直接写 `/c/<user>/go-sdk/go/bin` |
+| `raw.githubusercontent.com` 直连 SSL 失败（curl 35）；`<local-proxy>` 代理也不通 | 取上游源码走 `api.github.com` contents API（`Accept: application/vnd.github.raw`） |
 | `kubernetes/api` 仓库**没有** `v1.29.0` tag | 用 `kubernetes-1.29.0` |
 | `api.github.com` 对 >1 MB 文件返回空 `content` | 大文件必须加 `Accept: application/vnd.github.raw` |
 | `proxy.golang.org` 超时；`goproxy.cn` 200 | 必须 `GOPROXY=https://goproxy.cn,direct` |
@@ -135,11 +135,11 @@ M3（结构比较）已完成。下表全部是**本轮实测输出**，不是�
 
 ```bash
 # 0. 环境（本机；$USER 为空，写死用户名）
-export PATH="/c/Users/ASUS/go-sdk/go/bin:$PATH"
+export PATH="/c/<user>/go-sdk/go/bin:$PATH"
 export GOFLAGS=-mod=mod GOPROXY=https://goproxy.cn,direct GOTOOLCHAIN=local
 
 # 1. 布局门（每棒第一件事）
-cd "D:/ProgramData/zcode/10-20-cfgdelta"
+cd "<repo>"
 node tools/check-sprint-layout.mjs
 
 # 2. 生成物一致性

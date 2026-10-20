@@ -145,7 +145,10 @@ func TestProfilesMirrored(t *testing.T) {
 // 为什么必须有这条：YAML 非法时 GitHub 连 job 都不建（run 显示 failure 但 jobs=0），
 // 而文件字节、workflow state 都看起来正常。"推之前先在本地解析"是唯一便宜的拦截点。
 //
-// 变异验证：把某个 step 的 name 改成不带引号且含 ": " 的值 → 本测试必须红。
+// M6 起同时钉住发布面的形状（K-11：判据有几条，变异就覆盖几条）：
+// 三平台产物名齐、publish 真跑 sha256sum 且用 gh release create 上传附件。
+// 变异验证：删一条 matrix include / 把 sha256sum 换成 md5sum / 把 publish 的
+// permissions 改回只读 → 本测试必须红。
 func TestWorkflowParses(t *testing.T) {
 	root := repoRoot(t)
 	path := filepath.Join(root, ".github", "workflows", "ci.yml")
@@ -155,6 +158,17 @@ func TestWorkflowParses(t *testing.T) {
 	}
 	var doc struct {
 		Jobs map[string]struct {
+			If          string            `yaml:"if"`
+			Needs       string            `yaml:"needs"`
+			Permissions map[string]string `yaml:"permissions"`
+			Strategy    struct {
+				Matrix struct {
+					Include []struct {
+						OS    string `yaml:"os"`
+						Asset string `yaml:"asset"`
+					} `yaml:"include"`
+				} `yaml:"matrix"`
+			} `yaml:"strategy"`
 			Steps []struct {
 				Name string `yaml:"name"`
 				Run  string `yaml:"run"`
@@ -165,10 +179,10 @@ func TestWorkflowParses(t *testing.T) {
 	if err := yaml.Unmarshal(data, &doc); err != nil {
 		t.Fatalf("workflow YAML is invalid (GitHub would create 0 jobs): %v", err)
 	}
-	if len(doc.Jobs) != 3 {
-		t.Fatalf("job count = %d, want 3 (layout / consistency / test)", len(doc.Jobs))
+	if len(doc.Jobs) != 5 {
+		t.Fatalf("job count = %d, want 5 (layout / consistency / test / release-build / publish)", len(doc.Jobs))
 	}
-	for _, required := range []string{"layout", "consistency", "test"} {
+	for _, required := range []string{"layout", "consistency", "test", "release-build", "publish"} {
 		if _, ok := doc.Jobs[required]; !ok {
 			t.Fatalf("required job %q is missing", required)
 		}
@@ -184,12 +198,53 @@ func TestWorkflowParses(t *testing.T) {
 	if !sawGate {
 		t.Fatal("the layout gate has no CI step — it would only exist on the developer's machine")
 	}
+
+	// 发布面：三平台原生构建必须都在 matrix 里，且产物名与 Release 附件一致。
+	release := doc.Jobs["release-build"]
+	if !strings.Contains(release.If, "refs/tags/v") {
+		t.Fatal("release-build must be gated on v* tags — VERSION==tag is only meaningful there")
+	}
+	wantAssets := map[string]string{
+		"ubuntu-latest":  "cfgdelta-linux-amd64",
+		"macos-latest":   "cfgdelta-darwin-arm64",
+		"windows-latest": "cfgdelta-windows-amd64.exe",
+	}
+	sawAssets := map[string]bool{}
+	for _, inc := range release.Strategy.Matrix.Include {
+		if want, ok := wantAssets[inc.OS]; ok && inc.Asset == want {
+			sawAssets[inc.Asset] = true
+		}
+	}
+	for _, asset := range wantAssets {
+		if !sawAssets[asset] {
+			t.Fatalf("release matrix is missing the native asset %q", asset)
+		}
+	}
+
+	publish := doc.Jobs["publish"]
+	if publish.Needs != "release-build" {
+		t.Fatalf("publish needs = %q, want release-build", publish.Needs)
+	}
+	if publish.Permissions["contents"] != "write" {
+		t.Fatalf("publish permissions.contents = %q, want write (uploading assets needs it)", publish.Permissions["contents"])
+	}
+	var publishRuns strings.Builder
+	for _, s := range publish.Steps {
+		publishRuns.WriteString(s.Run)
+		publishRuns.WriteString("\n")
+	}
+	for _, needle := range []string{"sha256sum cfgdelta-*", "SHA256SUMS", "gh release create"} {
+		if !strings.Contains(publishRuns.String(), needle) {
+			t.Fatalf("publish steps never mention %q — assets would ship unverifiable", needle)
+		}
+	}
+
 	total := 0
 	for name, job := range doc.Jobs {
 		total += len(job.Steps)
 		t.Logf("job %s: %d steps", name, len(job.Steps))
 	}
-	if total < 15 {
+	if total < 18 {
 		t.Fatalf("total steps = %d, suspiciously few (expected the full pipeline)", total)
 	}
 }

@@ -36,5 +36,5 @@ node tools/check-sprint-layout.mjs    # 布局门；必须绿，红了先修布�
 
 - 2026-10-20 实测：本机 **无 `go` 命令**，Go 1.24.5 解压在仓库外 `C:\Users\<user>\go-sdk\go`（`.tmp/sdk/go` 在本机不存在；`/.tmp/` 已被 `.gitignore` 排除）；`GOFLAGS=-mod=mod GOPROXY=https://goproxy.cn,direct` 可拉取 `gopkg.in/yaml.v3`。
 - 2026-10-20 实测：`node v24.15.0` 可用；`py -0p` 有 3.8 与 3.12；`rustc 1.95.0` 可用（未选）。
-- 2026-10-20 实测：`crates.io` 直连 403、`api.github.com` 200；`github.com` git 通道不稳时先试本地代理 `127.0.0.1:7897`。
+- 2026-10-20 实测：`crates.io` 直连 403、`api.github.com` 200；`github.com` git 通道不稳时先试本地代理 `<local-proxy>`。
 - **禁止**：把"未执行"写成已完成；在 tag 之后改代码面；把会话里的绝对路径写进库内文档。

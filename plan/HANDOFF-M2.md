@@ -88,7 +88,7 @@ M1（数据先行）已完成。下表全部是**本轮实测输出**，不是�
 | 事实（实测日期 2026-10-20） | 后果 / 处置 |
 |---|---|
 | `go` 不在 PATH；SDK 在 `C:\Users\<user>\go-sdk\go`（仓库外） | 每棒先 `export PATH="/c/<user>/go-sdk/go/bin:$PATH"` |
-| `raw.githubusercontent.com` 直连 **SSL 失败（curl 35）**；`127.0.0.1:7897` 代理也不通（curl 7） | 取上游源码改走 **`api.github.com` contents API**：`Accept: application/vnd.github.raw`，或 base64 解码 `content` 字段 |
+| `raw.githubusercontent.com` 直连 **SSL 失败（curl 35）**；`<local-proxy>` 代理也不通（curl 7） | 取上游源码改走 **`api.github.com` contents API**：`Accept: application/vnd.github.raw`，或 base64 解码 `content` 字段 |
 | `kubernetes/api` 仓库**没有** `v1.29.0` tag | 用 `kubernetes-1.29.0`；`kubernetes/kubernetes` 才是 `v1.29.0` |
 | `api.github.com` contents API 对 >1 MB 文件返回空 `content` | 大文件（如 `core/v1/types.go`）必须加 `Accept: application/vnd.github.raw` |
 | GitHub Releases 直下可用 | dyff `dyff_1.12.0_windows_amd64.tar.gz`、diffyml `diffyml_1.8.2_windows_amd64.zip` 均一次成功 |

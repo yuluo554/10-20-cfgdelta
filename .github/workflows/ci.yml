@@ -20,6 +20,8 @@ jobs:
           node-version: "20"
       - name: "Layout gate (methodology binding)"
         run: node tools/check-sprint-layout.mjs
+      - name: "Desensitization gate (no host paths / usernames / local proxy)"
+        run: node tools/check-desensitized.mjs
 
   # ── 生成物与镜像一致性：数据源与内嵌副本不得漂移 ────────────────────────
   consistency:
@@ -46,7 +48,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        # macOS is in the push matrix on purpose: the release assets include
+        # darwin/arm64, and a tag-only failure would force a re-tag.
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -94,3 +98,98 @@ jobs:
           ./dist/cfgdelta classify testdata/golden/testA/k1.yaml testdata/golden/testA/k2.yaml > run1.txt
           ./dist/cfgdelta classify testdata/golden/testA/k1.yaml testdata/golden/testA/k2.yaml > run2.txt
           cmp run1.txt run2.txt
+
+  # ── 发布产物：三平台**原生**构建（不是交叉编译）+ 原生冒烟 ────────────────
+  # 只在 v* tag 上跑：VERSION 必须与 tag 一致（K-03 版本单一来源），
+  # 三条产物的冒烟都在各自平台上真跑一遍 selftest。
+  release-build:
+    name: "release build (${{ matrix.asset }})"
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            asset: cfgdelta-linux-amd64
+          - os: macos-latest
+            asset: cfgdelta-darwin-arm64
+          - os: windows-latest
+            asset: cfgdelta-windows-amd64.exe
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - name: "Version single source (VERSION == tag)"
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(tr -d '[:space:]' < VERSION)
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$version" != "$tag" ]; then
+            echo "::error::VERSION ($version) does not match tag ($tag) — K-03"
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+      - name: "Build static binary"
+        shell: bash
+        run: |
+          set -euo pipefail
+          CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" \
+            -o "dist/${{ matrix.asset }}" ./cmd/cfgdelta
+      - name: "Native smoke (version + golden selftest)"
+        shell: bash
+        run: |
+          set -euo pipefail
+          "./dist/${{ matrix.asset }}" --version
+          "./dist/${{ matrix.asset }}" selftest
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: dist/${{ matrix.asset }}
+          if-no-files-found: error
+
+  # ── GitHub Release：三平台二进制 + SHA256SUMS（手工上传附件）─────────────
+  publish:
+    name: "publish release"
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: release-build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: "Checksums + manifest"
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+          ls -l
+          sha256sum cfgdelta-* > SHA256SUMS
+          cat SHA256SUMS
+          {
+            printf 'cfgdelta %s — behavioural config diff (normalization layer + impact classification layer).\n\n' "${GITHUB_REF_NAME#v}"
+            printf 'Single static binary, zero runtime dependencies, no external commands.\n\n'
+            printf 'Native builds: linux/amd64, darwin/arm64, windows/amd64.\n'
+            printf 'Verify the downloads: sha256sum -c SHA256SUMS\n\n'
+            printf 'The golden suite (76 cases) runs offline: cfgdelta selftest\n'
+          } > RELEASE_NOTES.md
+      - name: "Create GitHub Release"
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" \
+            dist/cfgdelta-linux-amd64 \
+            dist/cfgdelta-darwin-arm64 \
+            dist/cfgdelta-windows-amd64.exe \
+            dist/SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "cfgdelta ${GITHUB_REF_NAME#v}" \
+            --notes-file RELEASE_NOTES.md \
+            --verify-tag
