@@ -58,6 +58,8 @@ func validEnvKey(k string) bool {
 }
 
 // stripEnvComment 去掉行内注释（引号内的 `#` 不算）。
+// 只把「行首或空白之后的 `#`」当注释：`PASS=a#b` 里的 `#` 是值的一部分，
+// 否则一个密码里的井号会静默截断配置。
 func stripEnvComment(s string) string {
 	var quote byte
 	for i := 0; i < len(s); i++ {
@@ -70,7 +72,9 @@ func stripEnvComment(s string) string {
 		case c == '"' || c == '\'':
 			quote = c
 		case c == '#':
-			return s[:i]
+			if i == 0 || s[i-1] == ' ' || s[i-1] == '\t' {
+				return s[:i]
+			}
 		}
 	}
 	return s

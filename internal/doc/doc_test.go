@@ -251,7 +251,7 @@ func TestINIDuplicateKeyIsError(t *testing.T) {
 }
 
 func TestDotEnvQuotingAndExport(t *testing.T) {
-	n, format, err := ParseBytes("a.env", []byte("export APP=synth\nQ=\"a b # not comment\"\nHASH=abc # comment\n"))
+	n, format, err := ParseBytes("a.env", []byte("export APP=synth\nQ=\"a b # not comment\"\nHASH=abc # comment\nPASS=a#b\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -266,6 +266,10 @@ func TestDotEnvQuotingAndExport(t *testing.T) {
 	}
 	if got := n.Get("HASH").Raw; got != "abc" {
 		t.Errorf("HASH = %q (inline comment not stripped?)", got)
+	}
+	// 空白之前的 `#` 才是注释；值内部的 `#` 必须保留。
+	if got := n.Get("PASS").Raw; got != "a#b" {
+		t.Errorf("PASS = %q, want a#b (a # inside a value is not a comment)", got)
 	}
 }
 
