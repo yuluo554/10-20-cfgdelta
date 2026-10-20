@@ -19,8 +19,8 @@ var durationUnits = map[string]*big.Rat{
 
 // ParseDuration 按 Go time.ParseDuration 文法把字符串解析为纳秒整数（§4.2）。
 //
-//	 duration := ( number unit )+       ; 至少一组
-//	 特例:     "0" 合法（Go 同款）
+//	duration := ( number unit )+       ; 至少一组
+//	特例:     "0" 合法（Go 同款）
 func ParseDuration(s string) (int64, error) {
 	raw := strings.TrimSpace(s)
 	if raw == "" {

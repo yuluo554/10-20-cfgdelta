@@ -17,9 +17,9 @@ import (
 type EntryKind string
 
 const (
-	Added         EntryKind = "added"
-	Removed       EntryKind = "removed"
-	Changed       EntryKind = "changed"
+	Added   EntryKind = "added"
+	Removed EntryKind = "removed"
+	Changed EntryKind = "changed"
 	// CosmeticKind = 归一后语义相同、只是书写不同（§4.13 纯书写：**只计数，不逐条列**）。
 	CosmeticKind      EntryKind = "cosmetic"
 	IndeterminateKind EntryKind = "indeterminate"
@@ -27,14 +27,14 @@ const (
 
 // Entry 是一条差异。
 type Entry struct {
-	Path  string
-	Kind  EntryKind
-	Left  *value.Canonical
-	Right *value.Canonical
-	Reason string // Indeterminate 的理由码
-	Class string  // classify 阶段回填
+	Path     string
+	Kind     EntryKind
+	Left     *value.Canonical
+	Right    *value.Canonical
+	Reason   string // Indeterminate 的理由码
+	Class    string // classify 阶段回填
 	SubClass string
-	Guess bool // class_guess: true（分类不确定）
+	Guess    bool // class_guess: true（分类不确定）
 }
 
 // SeqMode 是序列比较模式（§4.10），显式选择、不做自动猜测。
@@ -62,14 +62,14 @@ func ParseSeqMode(s string) (SeqMode, error) {
 
 // Options 控制比较行为。
 type Options struct {
-	Seq      SeqMode
-	Coerce   *value.Coercion
-	Strict   bool
+	Seq    SeqMode
+	Coerce *value.Coercion
+	Strict bool
 }
 
 // Result 是比较结果。
 type Result struct {
-	Entries []Entry
+	Entries          []Entry
 	HasIndeterminate bool
 }
 

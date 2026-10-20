@@ -137,6 +137,52 @@ func TestNormalizeSubcommand(t *testing.T) {
 	}
 }
 
+// 前导 `/` 可省略（Git Bash / MSYS2 会把 `/x` 改写成 `C:/...`）。
+// 两种写法必须给出同一结果——这是干净 clone 实测抓出的可用性缺陷的回归。
+func TestAtPathLeadingSlashOptional(t *testing.T) {
+	for _, at := range []string{"/limits/memory", "limits/memory"} {
+		code, out, errs := run("normalize", "--at", at, "--family", "quantity",
+			"../../testdata/golden/testC/c01-left.yaml")
+		if code != exitcode.Equal {
+			t.Fatalf("--at %q: exit = %d, stderr = %s", at, code, errs)
+		}
+		if strings.TrimSpace(out) != "quantity:1073741824/1" {
+			t.Fatalf("--at %q: output = %q", at, out)
+		}
+	}
+}
+
+// `--flag=value` 形态必须与 `--flag value` 等价（README 与习惯各异）。
+func TestEqualsFlagForm(t *testing.T) {
+	code, out, errs := run("normalize", "--at=limits/memory", "--family=quantity",
+		"../../testdata/golden/testC/c01-left.yaml")
+	if code != exitcode.Equal {
+		t.Fatalf("exit = %d, stderr = %s", code, errs)
+	}
+	if strings.TrimSpace(out) != "quantity:1073741824/1" {
+		t.Fatalf("output = %q", out)
+	}
+
+	code, _, _ = run("diff", "--profile=k8s/v1.29",
+		"../../testdata/golden/testA/k1.yaml", "../../testdata/golden/testA/k2.yaml")
+	if code != exitcode.Equal {
+		t.Fatalf("--profile=k8s/v1.29 exit = %d, want 0", code)
+	}
+}
+
+// shell 把 `/limits/memory` 改写成 `D:/...` 时，必须给出**解释性**错误而不是
+// 含糊的 "matched no node"——静默失败最贵。
+func TestShellRewrittenPathIsExplained(t *testing.T) {
+	code, _, errs := run("normalize", "--at", "D:/program/Git/limits/memory", "--family", "quantity",
+		"../../testdata/golden/testC/c01-left.yaml")
+	if code != exitcode.Usage {
+		t.Fatalf("exit = %d, want 3", code)
+	}
+	if !strings.Contains(errs, "Windows absolute path") || !strings.Contains(errs, "leading slash") {
+		t.Fatalf("stderr must explain the shell rewrite:\n%s", errs)
+	}
+}
+
 // JSON 输出是机读面且确定性（不用 map 迭代）。
 func TestJSONOutput(t *testing.T) {
 	code, out, _ := run("classify", "--json",

@@ -51,9 +51,9 @@ func (e *Indeterminate) Error() string {
 
 // NullState 是 null 三态（§4.5）：缺失 / 显式 null / 空字符串，严格区分不折叠。
 const (
-	NullAbsent = "absent"
+	NullAbsent   = "absent"
 	NullExplicit = "null"
-	NullEmpty = "empty"
+	NullEmpty    = "empty"
 )
 
 // Canonical 是归一化后的规范值 —— 比较路径上**唯一**允许出现的值类型。

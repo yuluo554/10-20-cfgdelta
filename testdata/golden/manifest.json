@@ -33,7 +33,7 @@
       "args": [
         "diff",
         "--coerce-at",
-        "/nope/*=quantity",
+        "nope/*=quantity",
         "testA/k1.yaml",
         "testA/k2.yaml"
       ],
@@ -254,7 +254,7 @@
       "args": [
         "diff",
         "--coerce-at",
-        "/limits/*=quantity",
+        "limits/*=quantity",
         "testC/c01-left.yaml",
         "testC/c01-right.yaml"
       ],
@@ -269,7 +269,7 @@
       "args": [
         "diff",
         "--coerce-at",
-        "/limits/*=quantity",
+        "limits/*=quantity",
         "testC/c02-left.yaml",
         "testC/c02-right.yaml"
       ],
@@ -284,7 +284,7 @@
       "args": [
         "diff",
         "--coerce-at",
-        "/limits/*=quantity",
+        "limits/*=quantity",
         "testC/c03-left.yaml",
         "testC/c03-right.yaml"
       ],
@@ -299,7 +299,7 @@
       "args": [
         "diff",
         "--coerce-at",
-        "/limits/*=duration",
+        "limits/*=duration",
         "testC/c04-left.yaml",
         "testC/c04-right.yaml"
       ],
@@ -314,7 +314,7 @@
       "args": [
         "diff",
         "--coerce-at",
-        "/limits/*=duration",
+        "limits/*=duration",
         "testC/c05-left.yaml",
         "testC/c05-right.yaml"
       ],
@@ -329,7 +329,7 @@
       "args": [
         "diff",
         "--coerce-at",
-        "/limits/*=decimal",
+        "limits/*=decimal",
         "testC/c06-left.yaml",
         "testC/c06-right.yaml"
       ],
@@ -344,7 +344,7 @@
       "args": [
         "diff",
         "--coerce-at",
-        "/limits/*=decimal",
+        "limits/*=decimal",
         "testC/c07-left.yaml",
         "testC/c07-right.yaml"
       ],
@@ -359,7 +359,7 @@
       "args": [
         "diff",
         "--coerce-at",
-        "/limits/*=quantity",
+        "limits/*=quantity",
         "testC/c08-left.yaml",
         "testC/c08-right.yaml"
       ],
@@ -374,7 +374,7 @@
       "args": [
         "diff",
         "--coerce-at",
-        "/limits/*=quantity",
+        "limits/*=quantity",
         "testC/c09-left.yaml",
         "testC/c09-right.yaml"
       ],

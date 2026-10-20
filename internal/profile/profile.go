@@ -21,11 +21,11 @@ var embedded embed.FS
 
 // Rule 是一条默认值规则。
 type Rule struct {
-	Kind   string `json:"kind"`
-	Path   string `json:"path"`
+	Kind    string `json:"kind"`
+	Path    string `json:"path"`
 	Default string `json:"default"`
-	Family string `json:"family"`
-	Source string `json:"source"`
+	Family  string `json:"family"`
+	Source  string `json:"source"`
 }
 
 // Profile 是一份版本化默认值表。

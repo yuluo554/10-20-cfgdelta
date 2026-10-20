@@ -41,10 +41,10 @@ func (k Kind) String() string {
 // Node 是内部文档树节点。
 type Node struct {
 	Kind     Kind
-	Tag      string   // yaml 原生 tag：!!str / !!int / !!float / !!bool / !!null
+	Tag      string // yaml 原生 tag：!!str / !!int / !!float / !!bool / !!null
 	Style    yaml.Style
-	Raw      string   // 标量原文
-	Children []*Node  // Mapping: [k0,v0,k1,v1,...] 保持文档顺序；Sequence: 按序
+	Raw      string  // 标量原文
+	Children []*Node // Mapping: [k0,v0,k1,v1,...] 保持文档顺序；Sequence: 按序
 	Line     int
 	Column   int
 }

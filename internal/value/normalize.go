@@ -54,9 +54,14 @@ func (c *Coercion) MatchesAny(paths []string) map[string]bool {
 }
 
 // globSegmentMatch：`*` 只匹配一段（不含 `/`），其余按字面量比较。
+//
+// 前导 `/` 视为可省略：`/limits/*` 与 `limits/*` 等价。理由不是风格 ——
+// 在 Git Bash / MSYS2 下，以 `/` 开头的参数会被**静默改写成 Windows 路径**
+// （`--at /limits/memory` → `--at D:/program/Git/limits/memory`），
+// 用户写不带前导斜杠的形式才能在任何 shell 里稳定工作。
 func globSegmentMatch(pattern, p string) bool {
-	ps := strings.Split(pattern, "/")
-	ss := strings.Split(p, "/")
+	ps := strings.Split(strings.TrimPrefix(pattern, "/"), "/")
+	ss := strings.Split(strings.TrimPrefix(p, "/"), "/")
 	if len(ps) != len(ss) {
 		return false
 	}

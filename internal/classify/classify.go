@@ -62,11 +62,11 @@ func ParseClass(s string) (Class, bool) {
 
 // Summary 是分类汇总（计数全部从明细算得）。
 type Summary struct {
-	Total          int
-	ByClass        map[Class]int
-	Behavioral     int
-	Cosmetic       int
-	Indeterminate  int
+	Total         int
+	ByClass       map[Class]int
+	Behavioral    int
+	Cosmetic      int
+	Indeterminate int
 }
 
 // Result 是分类输出。

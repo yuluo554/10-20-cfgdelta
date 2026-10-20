@@ -114,11 +114,11 @@ const cCases = [
   ["c07", "decimal", 0, 0, 1, [], "1.50 == 1.5"],
 ];
 for (const [id, fam, exit, behavioral, cosmetic, indeterminate, note] of cCases) {
-  addCase(`testC-${id}`, ["diff", "--coerce-at", `/limits/*=${fam}`, `testC/${id}-left.yaml`, `testC/${id}-right.yaml`], exit, behavioral, cosmetic, indeterminate, note);
+  addCase(`testC-${id}`, ["diff", "--coerce-at", `limits/*=${fam}`, `testC/${id}-left.yaml`, `testC/${id}-right.yaml`], exit, behavioral, cosmetic, indeterminate, note);
 }
 addCase(
   "testC-c08-counterexample",
-  ["diff", "--coerce-at", "/limits/*=quantity", "testC/c08-left.yaml", "testC/c08-right.yaml"],
+  ["diff", "--coerce-at", "limits/*=quantity", "testC/c08-left.yaml", "testC/c08-right.yaml"],
   1,
   1,
   0,
@@ -127,7 +127,7 @@ addCase(
 );
 addCase(
   "testC-c09-ambiguous",
-  ["diff", "--coerce-at", "/limits/*=quantity", "testC/c09-left.yaml", "testC/c09-right.yaml"],
+  ["diff", "--coerce-at", "limits/*=quantity", "testC/c09-left.yaml", "testC/c09-right.yaml"],
   2,
   0,
   0,
@@ -183,7 +183,7 @@ addCase("exit-missing-args", ["diff", "testA/k1.yaml"], 3, 0, 0, [], "missing po
 addCase("exit-missing-file", ["diff", "testA/does-not-exist.yaml", "testA/k2.yaml"], 3, 0, 0, [], "missing input file is 3");
 addCase("exit-unknown-profile", ["diff", "--profile", "k8s/v9.99", "testA/k1.yaml", "testA/k2.yaml"], 3, 0, 0, [], "unknown profile version is 3, no fallback");
 addCase("exit-unknown-class", ["gate", "--fail-on", "not-a-class", "testA/k1.yaml", "testA/k2.yaml"], 3, 0, 0, [], "unknown impact class is 3");
-addCase("exit-coerce-miss", ["diff", "--coerce-at", "/nope/*=quantity", "testA/k1.yaml", "testA/k2.yaml"], 3, 0, 0, [], "unmatched --coerce-at glob is a usage error, never silent");
+addCase("exit-coerce-miss", ["diff", "--coerce-at", "nope/*=quantity", "testA/k1.yaml", "testA/k2.yaml"], 3, 0, 0, [], "unmatched --coerce-at glob is a usage error, never silent");
 addCase("exit-gate-empty", ["gate", "testA/k1.yaml", "testA/k2.yaml"], 3, 0, 0, [], "gate without --fail-on is a usage error");
 addCase("exit-version", ["--version"], 0, 0, 0, [], "version always exits 0");
 

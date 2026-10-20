@@ -39,7 +39,7 @@ Release binaries for three platforms plus `SHA256SUMS` are attached to GitHub Re
 
 ```bash
 # 1. Exact rational normalization — no floating point anywhere on the comparison path.
-$ cfgdelta normalize --at /limits/memory --family quantity testdata/golden/testC/c01-left.yaml
+$ cfgdelta normalize --at limits/memory --family quantity testdata/golden/testC/c01-left.yaml
 quantity:1073741824/1
 
 # 2. Without the defaults table, defaults and unit spellings show up as findings.
@@ -53,6 +53,12 @@ $ cfgdelta diff --profile k8s/v1.29 testdata/golden/testA/k1.yaml testdata/golde
 # 4. A CI gate that only blocks the classes you care about.
 $ cfgdelta gate --fail-on 资源·收缩,接口·暴露 left.yaml right.yaml; echo $?
 ```
+
+> **Path arguments are written without a leading slash** (`--at limits/memory`, not `--at /limits/memory`).
+> Both forms work, but Git Bash / MSYS2 silently rewrites a leading `/` into a Windows drive path
+> before the program ever sees it. If you must write the leading slash, set `MSYS2_ARG_CONV_EXCL="*"`
+> for that invocation. `cfgdelta` detects the rewritten form and tells you what happened instead of
+> failing with a bare "matched no node".
 
 Full before/after screenshot (`4 → 0`) lives at `docs/testA-before-after.png` (lands with M5).
 

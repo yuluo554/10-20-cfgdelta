@@ -18,13 +18,13 @@ import (
 
 // Case 是 manifest.json 中的一条用例（真值只存输入与期望，K-08）。
 type Case struct {
-	Case        string   `json:"case"`
-	Args        []string `json:"args"`
-	Exit        int      `json:"exit"`
-	Behavioral  int      `json:"behavioral"`
-	Cosmetic    int      `json:"cosmetic"`
+	Case          string   `json:"case"`
+	Args          []string `json:"args"`
+	Exit          int      `json:"exit"`
+	Behavioral    int      `json:"behavioral"`
+	Cosmetic      int      `json:"cosmetic"`
 	Indeterminate []string `json:"indeterminate"`
-	Note        string   `json:"note,omitempty"`
+	Note          string   `json:"note,omitempty"`
 }
 
 // Manifest 是 golden 清单。

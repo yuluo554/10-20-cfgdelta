@@ -111,7 +111,22 @@ func runNormalize(env Env, args []string) exitcode.Code {
 	var at, fam string
 	var file string
 	for i := 0; i < len(args); i++ {
-		switch args[i] {
+		a := args[i]
+		// 同时支持 `--flag value` 与 `--flag=value` 两种形态（README 与习惯各异）。
+		if key, val, ok := splitFlag(a); ok {
+			switch key {
+			case "--at":
+				at = val
+			case "--family":
+				fam = val
+			case "--json":
+				// 单值场景下 JSON 与文本同形，保留旗标以保持契约一致。
+			default:
+				return usageErr(env, "unknown flag "+key)
+			}
+			continue
+		}
+		switch a {
 		case "--at":
 			if i+1 >= len(args) {
 				return usageErr(env, "--at requires a path")
@@ -125,16 +140,18 @@ func runNormalize(env Env, args []string) exitcode.Code {
 			fam = args[i+1]
 			i++
 		case "--json":
-			// 单值场景下 JSON 与文本同形，保留旗标以保持契约一致。
 		default:
-			if strings.HasPrefix(args[i], "-") {
-				return usageErr(env, "unknown flag "+args[i])
+			if strings.HasPrefix(a, "-") {
+				return usageErr(env, "unknown flag "+a)
 			}
-			file = args[i]
+			file = a
 		}
 	}
 	if file == "" || at == "" || fam == "" {
 		return usageErr(env, "normalize requires --at <path> --family <fam> <file>")
+	}
+	if hint := shellRewrotePath(at); hint != "" {
+		return usageErr(env, hint)
 	}
 	f := value.Family(fam)
 	if !f.Valid() {
@@ -157,18 +174,48 @@ func runNormalize(env Env, args []string) exitcode.Code {
 	return exitcode.Equal
 }
 
+// splitFlag 拆 `--flag=value`；不含 `=` 或不是旗标时返回 ok=false。
+func splitFlag(a string) (key, val string, ok bool) {
+	if !strings.HasPrefix(a, "--") {
+		return "", "", false
+	}
+	idx := strings.Index(a, "=")
+	if idx < 0 {
+		return "", "", false
+	}
+	return a[:idx], a[idx+1:], true
+}
+
+// shellRewrotePath 识别"参数被 shell 改写成了 Windows 绝对路径"这种事故。
+//
+// Git Bash / MSYS2 会把以 `/` 开头的参数当成 POSIX 路径转写成 `C:/...`。用户看到的
+// 是"我明明写了 /limits/memory"，工具收到的却是 `D:/program/Git/limits/memory`。
+// 静默失败最贵，所以这里显式解释原因并给出两条可用写法。
+func shellRewrotePath(v string) string {
+	if len(v) < 3 {
+		return ""
+	}
+	isDrive := (v[0] >= 'A' && v[0] <= 'Z' || v[0] >= 'a' && v[0] <= 'z') && v[1] == ':' && (v[2] == '/' || v[2] == '\\')
+	if !isDrive {
+		return ""
+	}
+	return "path " + v + " looks like a Windows absolute path: your shell (Git Bash / MSYS2) " +
+		"rewrote a leading '/' into a drive letter. Write the path without the leading slash " +
+		"(e.g. `--at limits/memory`) or set MSYS2_ARG_CONV_EXCL=\"*\" for the invocation."
+}
+
 // ── diff / classify ────────────────────────────────────────────────────────
 
 type diffFlags struct {
-	profileName       string
-	seqMode           string
-	coerce            []value.CoerceRule
-	strict            bool
-	json              bool
-	dumpNormalized    bool
+	profileName        string
+	seqMode            string
+	coerce             []value.CoerceRule
+	strict             bool
+	json               bool
+	dumpNormalized     bool
 	allowIndeterminate bool
-	failOn            []classify.Class
-	left, right       string
+	failOn             []classify.Class
+	left, right        string
 }
 
 func parseDiffFlags(env Env, args []string, needFailOn bool) (diffFlags, exitcode.Code, bool) {
@@ -176,6 +223,48 @@ func parseDiffFlags(env Env, args []string, needFailOn bool) (diffFlags, exitcod
 	var positional []string
 	for i := 0; i < len(args); i++ {
 		a := args[i]
+		// 支持 `--flag=value`；同时**不**对路径取值做任何 shell 补全假设。
+		if key, val, ok := splitFlag(a); ok {
+			switch key {
+			case "--profile":
+				f.profileName = val
+			case "--seq-mode":
+				f.seqMode = val
+			case "--coerce-at":
+				eq := strings.LastIndex(val, "=")
+				if eq <= 0 {
+					return f, usageErr(env, "--coerce-at wants <path-glob>=<family>, got "+val), false
+				}
+				fam := value.Family(val[eq+1:])
+				if !fam.Valid() {
+					return f, usageErr(env, "--coerce-at unknown family "+string(fam)), false
+				}
+				f.coerce = append(f.coerce, value.CoerceRule{Pattern: val[:eq], Family: fam})
+			case "--fail-on":
+				for _, item := range strings.Split(val, ",") {
+					item = strings.TrimSpace(item)
+					if item == "" {
+						continue
+					}
+					c, ok := classify.ParseClass(item)
+					if !ok {
+						return f, usageErr(env, "unknown class "+item+" (want "+classList()+")"), false
+					}
+					f.failOn = append(f.failOn, c)
+				}
+			case "--strict":
+				f.strict = true
+			case "--json":
+				f.json = true
+			case "--dump-normalized":
+				f.dumpNormalized = true
+			case "--allow-indeterminate":
+				f.allowIndeterminate = true
+			default:
+				return f, usageErr(env, "unknown flag "+key), false
+			}
+			continue
+		}
 		next := func(flag string) (string, bool) {
 			if i+1 >= len(args) {
 				usageErr(env, flag+" requires a value")
