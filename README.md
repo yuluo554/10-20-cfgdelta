@@ -6,7 +6,7 @@
 
 It normalizes first (quantities, durations, numerics, YAML booleans), compares structure-independently (key order / indentation / quotes / comments are zero-noise), cancels Kubernetes API-server defaulting on **both** sides, and classifies what remains into five behavioural impact classes plus one cosmetic class that is only counted.
 
-> Status: **v0.1.0 — M6 released** (2026-10-20). The CLI, exit-code contract, parsers (YAML/JSON/TOML/INI/.env/HCL), normalization algebra, structural diff, defaulting profile (both-sides application, cancellation, degraded header), impact classification (six classes, semver sub-classes, gate semantics) and golden harness are in place and pass their tests. Release binaries for three platforms plus `SHA256SUMS` are attached to the `v0.1.0` GitHub Release. See `plan/05-里程碑与验收.md` for the milestone table.
+> Status: **v0.1.0** (2026-10-20). The CLI, exit-code contract, parsers (YAML/JSON/TOML/INI/.env/HCL), normalization algebra, structural diff, defaulting profile (both-sides application, cancellation, degraded header), impact classification (six classes, semver sub-classes, gate semantics) and golden harness are in place and pass their tests. See `plan/05-里程碑与验收.md` for the milestone table.
 
 ## Milestone status
 
