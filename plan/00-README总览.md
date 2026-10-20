@@ -23,7 +23,7 @@
 | `plan/04-数据计划.md` | 数据清单 / profile 形状 / golden 分层 / 真值纪律 / 生成器与守门 | ✅ v1（M0 落盘） |
 | `plan/05-里程碑与验收.md` | M0–M6 DoD / **K 编号清单** / 已知未验证项 / 排期 | ✅ v1（M0 落盘） |
 | `plan/06-交付对标.md` | 提交材料落点 / 评分对标 / 风险登记 / 缺口表 | ✅ v1（M0 落盘） |
-| `plan/HANDOFF-M<next>.md` | 每里程碑续接快照（七节） | ✅ `HANDOFF-M1` / `M2` / `M3` / `M4` / `M5` 已落盘；下一棒 `HANDOFF-M6.md` |
+| `plan/HANDOFF-M<next>.md` | 每里程碑续接快照（七节） | ✅ `HANDOFF-M1`–`M6` 已落盘；M6 为末棒（无 M7），收尾事实见 `plan/RELEASE-M6.md §二` |
 | `data/README.md` | 依据查证（三态 + issue/HN 编号 + 基准日）/ 可复现实测命令 / 数据源记录 / 合成数据纪律 / 数值口径纪律 | ✅ v1（出题阶段 4，2026-10-20） |
 | `tools/check-sprint-layout.mjs` | 布局门（方法论装订第②件） | ✅ v1（9 组变异验证） |
 | `.gitignore` | Go 编译产物 / 二进制 / 覆盖率 | ✅ v1 |
