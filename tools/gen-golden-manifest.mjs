@@ -340,11 +340,83 @@ addCase(
   0,
   [],
   "service type + port change are 接口·暴露",
+  ["接口·暴露"],
 );
 
-// ── 测试D：非 YAML 格式（M5 适配器未落地 → 显式 skip）────────────────────────
-addCase("testD-toml", ["diff", "testD/a.toml", "testD/b.toml"], 0, 0, 0, [], "pending: TOML adapter lands in M5");
-addCase("testD-hcl", ["diff", "testD/a.hcl", "testD/b.hcl"], 0, 0, 0, [], "pending: HCL adapter lands in M5 (unevaluated expressions)");
+// ── M5 分类门禁：六类各一例 + 镜像 semver 四例可见 ──────────────────────────
+// 真值由 data/README.md §4.13 的分类表推导（资源·收缩 / 接口·暴露已有端到端用例）。
+addCase(
+  "classify-deploy-shrink",
+  ["classify", "testGate/deploy-shrink-left.yaml", "testGate/deploy-shrink-right.yaml"],
+  1, 1, 0, [],
+  "minReadySeconds 0 -> 30 weakens the rollout: 部署·收缩",
+  ["部署·收缩"],
+);
+addCase(
+  "classify-config-remove",
+  ["classify", "testGate/config-remove-left.yaml", "testGate/config-remove-right.yaml"],
+  1, 1, 0, [],
+  "removing a ConfigMap data key is 配置·新增·移除",
+  ["配置·新增·移除"],
+);
+addCase(
+  "classify-cosmetic",
+  ["classify", "testGate/cosmetic-left.yaml", "testGate/cosmetic-right.yaml"],
+  0, 0, 1, [],
+  "1Gi vs 1024Mi is pure spelling: counted as cosmetic, never listed, exit 0",
+  ["cosmetic 1"],
+);
+// semver 四例：major / minor / patch / non-semver 必须出现在 sub_class 输出面。
+const semverCases = [
+  ["major", "1.2.3", "2.0.0"],
+  ["minor", "1.2.3", "1.3.0"],
+  ["patch", "1.2.3", "1.2.4"],
+  ["nonsemver", "latest", "1.2.4"],
+];
+for (const [id, l, r] of semverCases) {
+  const sub = id === "nonsemver" ? "non-semver" : id;
+  addCase(
+    `classify-image-${id}`,
+    ["classify", `testGate/image-${id}-left.yaml`, `testGate/image-${id}-right.yaml`],
+    1, 1, 0, [],
+    `image ${l} -> ${r} is 镜像·变更/${sub}`,
+    ["镜像·变更/" + sub],
+  );
+}
+
+// ── 测试D：非 YAML 格式（M5 适配器落地；按扩展名显式分派）───────────────────
+addCase(
+  "testD-toml",
+  ["diff", "testD/a.toml", "testD/b.toml"],
+  0, 0, 0, [],
+  "TOML: [section] is a table, key order is irrelevant (0 entries)",
+);
+addCase(
+  "testD-hcl",
+  ["diff", "testD/a.hcl", "testD/b.hcl"],
+  0, 0, 0, [],
+  "HCL: attribute order is irrelevant inside a block (0 entries)",
+);
+addCase(
+  "testD-hcl-unevaluated",
+  ["diff", "testD/a-expr.hcl", "testD/b-expr.hcl"],
+  2, 0, 0,
+  ["unevaluated_expression"],
+  "HCL expressions are never evaluated: differing expressions are indeterminate, with the literal text visible",
+  ["indeterminate(unevaluated_expression)", "var.replicas -> var.nodes"],
+);
+addCase(
+  "testD-ini",
+  ["diff", "testD/a.ini", "testD/b.ini"],
+  0, 0, 0, [],
+  "INI: section key order is irrelevant; values stay strings (no type guessing)",
+);
+addCase(
+  "testD-env",
+  ["diff", "testD/a.env", "testD/b.env"],
+  0, 0, 0, [],
+  ".env: key order is irrelevant; quotes follow .env rules, not YAML's",
+);
 
 // ── 退出码契约（参数化，逐位）────────────────────────────────────────────
 addCase("exit-unknown-subcommand", ["nosuchcommand"], 3, 0, 0, [], "usage error is 3, never 2");
@@ -400,7 +472,7 @@ if (orphans.length > 0) {
 const manifest = {
   generated_by: "tools/gen-golden-manifest.mjs",
   scope_note:
-    "Covers the four red-teamed families (A/B/C/D), every one of the 10 defaulting rules in data/profiles/k8s/v1.29.json (each rule has a cancel case plus an explicit non-default control), the unmatched-profile degraded header, the §4.1/§4.2 grammar boundaries, and the M3 structural-comparison cases (four noise classes / sequence modes / RFC 6901 paths). NOT full Kubernetes semantics.",
+    "Covers the four red-teamed families (A/B/C/D), every one of the 10 defaulting rules in data/profiles/k8s/v1.29.json (each rule has a cancel case plus an explicit non-default control), the unmatched-profile degraded header, the §4.1/§4.2 grammar boundaries, the M3 structural-comparison cases (four noise classes / sequence modes / RFC 6901 paths), the M5 impact classes (six classes end-to-end + four semver sub-classes), and the M5 format adapters (TOML / HCL / INI / .env, HCL expressions as unevaluated). NOT full Kubernetes semantics.",
   cases: cases.sort((a, b) => (a.case < b.case ? -1 : a.case > b.case ? 1 : 0)),
 };
 

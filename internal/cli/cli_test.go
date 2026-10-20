@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -220,5 +222,21 @@ func TestJSONOutput(t *testing.T) {
 		if !strings.Contains(out, want) {
 			t.Fatalf("json output missing %s:\n%s", want, out)
 		}
+	}
+}
+
+// M5：未知扩展名必须 exit 3 并说明支持面，**不回落 YAML**。
+func TestUnknownFormatIsUsageError(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "a.txt")
+	if err := os.WriteFile(path, []byte("a: 1\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	code, _, errs := run("diff", path, "../../testdata/golden/testA/k2.yaml")
+	if code != exitcode.Usage {
+		t.Fatalf("exit = %d, want 3\nstderr: %s", code, errs)
+	}
+	if !strings.Contains(errs, "unsupported input format") {
+		t.Fatalf("stderr must explain the unsupported format, got: %s", errs)
 	}
 }

@@ -49,7 +49,11 @@ func renderEntry(e diff.Entry) string {
 	case diff.Removed:
 		return fmt.Sprintf("- %s  %s  [%s]", e.Path, left, class)
 	case diff.IndeterminateKind:
-		return fmt.Sprintf("? %s  indeterminate(%s)", e.Path, e.Reason)
+		line := fmt.Sprintf("? %s  indeterminate(%s)", e.Path, e.Reason)
+		if e.Detail != "" {
+			line += "  " + e.Detail
+		}
+		return line
 	}
 	return fmt.Sprintf("~ %s  %s -> %s  [%s]", e.Path, left, right, class)
 }
@@ -83,6 +87,9 @@ func renderJSON(head string, r classify.Result, ar interface{}) string {
 			}
 			if e.Reason != "" {
 				b.WriteString(", " + `"reason": ` + jsonStr(e.Reason))
+			}
+			if e.Detail != "" {
+				b.WriteString(", " + `"detail": ` + jsonStr(e.Detail))
 			}
 			if e.Left != nil {
 				b.WriteString(", " + `"left": ` + jsonStr(diff.CanonicalOf(e.Left)))

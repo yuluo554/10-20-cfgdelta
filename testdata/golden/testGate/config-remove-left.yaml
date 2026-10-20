@@ -1,0 +1,6 @@
+kind: ConfigMap
+metadata:
+  name: synth-config
+data:
+  log.level: info
+  feature.flag: alpha

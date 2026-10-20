@@ -23,11 +23,11 @@
 | `plan/04-数据计划.md` | 数据清单 / profile 形状 / golden 分层 / 真值纪律 / 生成器与守门 | ✅ v1（M0 落盘） |
 | `plan/05-里程碑与验收.md` | M0–M6 DoD / **K 编号清单** / 已知未验证项 / 排期 | ✅ v1（M0 落盘） |
 | `plan/06-交付对标.md` | 提交材料落点 / 评分对标 / 风险登记 / 缺口表 | ✅ v1（M0 落盘） |
-| `plan/HANDOFF-M<next>.md` | 每里程碑续接快照（七节） | ✅ `HANDOFF-M1` / `M2` / `M3` / `M4` 已落盘；下一棒 `HANDOFF-M5.md` |
+| `plan/HANDOFF-M<next>.md` | 每里程碑续接快照（七节） | ✅ `HANDOFF-M1` / `M2` / `M3` / `M4` / `M5` 已落盘；下一棒 `HANDOFF-M6.md` |
 | `data/README.md` | 依据查证（三态 + issue/HN 编号 + 基准日）/ 可复现实测命令 / 数据源记录 / 合成数据纪律 / 数值口径纪律 | ✅ v1（出题阶段 4，2026-10-20） |
 | `tools/check-sprint-layout.mjs` | 布局门（方法论装订第②件） | ✅ v1（9 组变异验证） |
 | `.gitignore` | Go 编译产物 / 二进制 / 覆盖率 | ✅ v1 |
-| `README.md` / `LICENSE` / `docs/testA-before-after.png` | 对外说明 / 许可 / 首屏对照截图 | 🟡 README+LICENSE 已落；截图待 M5 |
+| `README.md` / `LICENSE` / `docs/testA-before-after.png` | 对外说明 / 许可 / 首屏对照截图 | ✅ 三件齐（截图 M5 落盘并进 README 首屏） |
 
 ## 二、决策记录表
 
@@ -77,16 +77,16 @@
 | K8s 默认值双侧抵消 | 测试A 实测（dyff 4 条 → 目标 0 条） | 模块 M3（里程碑 M4）+ 版本化 JSON profile | 测试A 4 → 0；显式非默认对照组仍报 1 条 | ✅ M4（`testA-profile` exit 0 / behavioral 0 / cosmetic 2；`testA-ctrl-profile` exit 1；golden `testM4-rule01..10-cancel/nondefault` 共 20 例；变异：禁用施加 → 21 例红，覆盖显式值 → 11 例红） |
 | 10 条高频默认值 | 公开 manifest 语义（候选清单见 plan/01 M3） | `data/profiles/k8s/v1.29.json` | 逐条 golden + 版本号进输出头 | ✅ M4（`testM4/rule01–rule10`：每条「缺失 vs 显式默认」抵消 + 「显式非默认」仍报 1 条；头部带 `profile k8s/v1.29 (hits: N)`） |
 | profile 未命中降级 | 决策（风险②） | 输出头部标注 | 未知 kind 输入 → 头部出现降级标注 | ✅ M4（golden `testM4-degraded-header`：ConfigMap 双侧未命中 → 头部含 `degraded: structural-only` 与 `hits: 0`；变异：删标注 → 该例红） |
-| 影响分类五类 + 纯书写 | plan/01 M4 表 | 模块 M4（里程碑 M5）引擎内嵌 | 五类各一例 + 纯书写只计数断言 | ⬜ 待 M5 实现 |
-| 镜像 semver 细分 | semver 规范（公开） | 模块 M4（里程碑 M5）引擎内嵌 | major/minor/patch/non-semver 四例断言 | ⬜ 待 M5 实现 |
+| 影响分类五类 + 纯书写 | plan/01 M4 表 | 模块 M4（里程碑 M5）引擎内嵌 | 五类各一例 + 纯书写只计数断言 | ✅ M5（六类各一例端到端：`classify-resource-shrink` / `classify-deploy-shrink` / `classify-image-*` / `classify-exposure` / `classify-config-remove` / `classify-cosmetic`；纯书写只计数不逐条列） |
+| 镜像 semver 细分 | semver 规范（公开） | 模块 M4（里程碑 M5）引擎内嵌 | major/minor/patch/non-semver 四例断言 | ✅ M5（`classify-image-{major,minor,patch,nonsemver}` 四条 golden 的 `contains` 断言 `镜像·变更/<sub_class>` 出现在输出面；`TestImageSemverClassification` 单测四条） |
 | 退出码 0/1/2/3 | 决策（一处定义） | CLI + README 命令表 | 逐码参数化断言 | ✅ 单点定义 + `TestExitCodeContract` + golden `exit-*` 逐码断言 |
 | `gate --fail-on` 选择性阻断 | 决策（门禁语义） | CLI `gate` 子命令 | 未列出的行为差异不阻断断言 | ✅ `TestGateSelectiveBlocking` + golden `gate-ignore-shrink` |
-| TOML/INI/.env/HCL 适配 | 测试D 实测 | M5 适配器 | 测试D TOML 零噪声 + HCL 重排零差异 | ⬜ 待 M5 实现 |
-| HCL 不求值 | 决策（只做结构解析） | M5 `unevaluated` 标注 | 表达式节点标注断言 | ⬜ 待 M5 实现 |
-| golden 四组夹具 | 测试A/B/C/D 实测 | `testdata/golden/` | `selftest` 一条命令全跑 | ✅ 已落盘（66 例，64 pass / 2 显式 skip） |
+| TOML/INI/.env/HCL 适配 | 测试D 实测 | M5 适配器 | 测试D TOML 零噪声 + HCL 重排零差异 | ✅ M5（`testD-toml` / `testD-hcl` / `testD-ini` / `testD-env` 均 0 条目 exit 0；按扩展名显式分派，未知扩展名 exit 3 不回落） |
+| HCL 不求值 | 决策（只做结构解析） | M5 `unevaluated` 标注 | 表达式节点标注断言 | ✅ M5（`testD-hcl-unevaluated`：exit 2，输出含 `indeterminate(unevaluated_expression)` 与左右原文；`TestHCLExpressionIsUnevaluated` / `TestUnevaluatedExpressions`） |
+| golden 四组夹具 | 测试A/B/C/D 实测 | `testdata/golden/` | `selftest` 一条命令全跑 | ✅ 已落盘（76 例，76 pass / 0 显式 skip） |
 | 三家基线留档 | dyff v1.12.0 / diffyml v1.8.2 / confdiff 0.17.2 实测 | `testdata/baseline/` | 留档含版本 + 命令 + 输出 | ✅ 已落盘（40 个 `.out` + 四件齐全守门） |
 | 单静态二进制 | 形态决策 | Release 附件 | 干净机器直接运行；`file` / 依赖检查 | ⬜ 待 M6 验证 |
-| README 首屏 4→0 对照 | 测试A golden | `docs/testA-before-after.png` | 文件存在 + 内容与 golden 一致 | ⬜ 待 M5 补（依赖 M4 默认值生效） |
+| README 首屏 4→0 对照 | 测试A golden | `docs/testA-before-after.png` | 文件存在 + 内容与 golden 一致 | ✅ M5（1280×760 PNG；左 `total 4 · behavioral 2 · cosmetic 2` exit 1，右 `total 2 · behavioral 0 · cosmetic 2` exit 0；README 首屏引用） |
 | 发布可用性 | GitHub Releases | 源码 + 二进制 + SHA256SUMS | 干净环境 clone 跑通 README；真下载 sha256 复验 | ⬜ 待 M6 |
 | 完整 defaulting 表（扩展项） | — | 不承诺首期 | 非首期 DoD | 扩展项 |
 | helm values 覆盖链（扩展项） | 需求真实（HN 40861457），形态冲突 | 不承诺首期 | 非首期 DoD | 扩展项 |
@@ -101,7 +101,7 @@
 | **M2 归一化** | M1 模块（normalize 引擎）：Quantity / Duration / 十进制 / 布尔族 / null 三态 / `indeterminate` | 测试C 七组 100% 判等；`1Gi` vs `1000M` 判不等；`MB` vs `MiB` 判 indeterminate 且带理由码；浮点禁令有静态拦截；双跑字节一致 | ✅ 完成（2026-10-20：golden 35 例 33 pass / 2 显式 skip；测试C 七组全等、c08 反例 rc=1、c09 exit 2；浮点门 0 命中；双跑 `cmp` 逐字节一致；修掉 `ParseDecimal` 不接受符号导致 `+1`/`-0` 报错的缺陷，新增 5 条文法边界 + 1 条非法 YAML golden） |
 | **M3 结构比较** | M2 模块（diff 引擎）：键序无关 / 序列三模式 / 注释零噪声 | 四类结构差异零条目；`keyed:` 重复键报错；`set` 乱序零差异；双跑字节一致 | ✅ 完成（2026-10-20：新增 `testM3` 10 条 golden——四类噪声均 0 条目 exit 0、set 乱序 0 条、set 重复 exit 2、keyed 乱序 0 条、keyed 重复 exit 3 且输出带 `/items/1`、RFC 6901 `/a~1b`+`/c~0d`；`selftest` 45 例 43 pass / 2 显式 skip；双跑 `cmp` 三组逐字节一致） |
 | **M4 默认值** | M3 模块（profile）：双侧施加 + 抵消 + 未命中降级 | **测试A 4 条 → 0 条**；显式非默认对照组仍报 1 条；未知 profile 版本明确报错；`--dump-normalized` 可见双侧默认值 | ✅ 完成（2026-10-20：`testA-profile` exit 0 / behavioral 0 / cosmetic 2、`testA-ctrl-profile` exit 1、未知版本 exit 3；新增 `testM4/` 32 个夹具 21 条 golden——10 条规则各一对「抵消 + 显式非默认」+ 降级标注；施加顺序改为 §4.11 的路径序并暴露 `Applied` 供断言；selftest 66 例 64 pass / 2 显式 skip；4 组变异全红后还原） |
-| **M5 分类门禁** | M4 模块 + M5 模块（多格式适配器）；README 首屏截图 | **测试B 5 条 exit 1 → 0 行为差异 exit 0**；五类各一例；退出码 0/1/2/3 逐位断言；测试D TOML 零噪声；`docs/testA-before-after.png` 落盘 | ⬜ 待开工 |
+| **M5 分类门禁** | M4 模块 + M5 模块（多格式适配器）；README 首屏截图 | **测试B 5 条 exit 1 → 0 行为差异 exit 0**；五类各一例；退出码 0/1/2/3 逐位断言；测试D TOML 零噪声；`docs/testA-before-after.png` 落盘 | ✅ 完成（2026-10-20：测试B 的 5 行语义在 `keyed:name` / `set` 下 0 行为差异（`ordered` 下 4+2 是显式模式的诚实结果，口径已查清）；六类各一例 + semver 四例端到端；TOML/HCL/INI/.env 适配器按扩展名分派，未知格式 exit 3；HCL 表达式 `unevaluated_expression`；selftest 76 例 76 pass / 0 skip；首屏截图落盘；4 组变异全红后还原） |
 | **M6 发布** | 发布 **GitHub 公开仓库**（署名 `yuluo554`） | **三件套：① git tag ② GitHub Release 附产物（≥1 个手工上传附件：三平台二进制 + `SHA256SUMS`；本地留副本 + sha256 可复验）③ 发布留档（`plan/RELEASE-M6.md`，须在 tag 之前进 tag 树）**；缺任一项即未达成。另：干净环境 clone 按 README 跑通；提交面脱敏扫描 0 命中 | ⬜ 待开工 |
 
 ## 五、纪律

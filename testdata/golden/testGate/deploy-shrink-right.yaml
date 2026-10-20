@@ -1,0 +1,8 @@
+kind: Deployment
+spec:
+  minReadySeconds: 30
+  template:
+    spec:
+      containers:
+        - name: web
+          image: registry.example/synth/web:1.0.0

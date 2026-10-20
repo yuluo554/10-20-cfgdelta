@@ -27,11 +27,14 @@ const (
 
 // Entry 是一条差异。
 type Entry struct {
-	Path     string
-	Kind     EntryKind
-	Left     *value.Canonical
-	Right    *value.Canonical
-	Reason   string // Indeterminate 的理由码
+	Path  string
+	Kind  EntryKind
+	Left  *value.Canonical
+	Right *value.Canonical
+	// Reason 是 indeterminate 的理由码（K-10）。
+	Reason string
+	// Detail 是理由码的可见证据（HCL 表达式原文等）；为空则不打印。
+	Detail   string
 	Class    string // classify 阶段回填
 	SubClass string
 	Guess    bool // class_guess: true（分类不确定）
@@ -252,6 +255,21 @@ func keyedIndex(p string, n *doc.Node, field string) (map[string]*doc.Node, erro
 }
 
 func compareScalar(p string, l, r *doc.Node, opt Options, res *Result) error {
+	// HCL 表达式节点：两侧原文相同 → 无差异；不同 → 一等 indeterminate。
+	// **绝不**把表达式当字符串判定相等/不等（plan/01 模块 5）。
+	if doc.IsUnevaluated(l) || doc.IsUnevaluated(r) {
+		if doc.IsUnevaluated(l) && doc.IsUnevaluated(r) && l.Raw == r.Raw {
+			return nil
+		}
+		detail := unevaluatedDetail(l, r)
+		res.Entries = append(res.Entries, Entry{
+			Path: p, Kind: IndeterminateKind,
+			Reason: value.ReasonUnevaluatedExpression, Detail: detail,
+		})
+		res.HasIndeterminate = true
+		return nil
+	}
+
 	lfam := familyFor(p, l, opt)
 	rfam := familyFor(p, r, opt)
 
@@ -276,12 +294,12 @@ func compareScalar(p string, l, r *doc.Node, opt Options, res *Result) error {
 	// indeterminate 是**一等结果**，不是错误：把它记成条目并继续，
 	// 否则一个歧义值会让整次 diff 中断、连汇总都打不出来。
 	if ind := asIndeterminate(lerr); ind != nil {
-		res.Entries = append(res.Entries, Entry{Path: p, Kind: IndeterminateKind, Reason: ind.Reason})
+		res.Entries = append(res.Entries, Entry{Path: p, Kind: IndeterminateKind, Reason: ind.Reason, Detail: ind.Detail})
 		res.HasIndeterminate = true
 		return nil
 	}
 	if ind := asIndeterminate(rerr); ind != nil {
-		res.Entries = append(res.Entries, Entry{Path: p, Kind: IndeterminateKind, Reason: ind.Reason})
+		res.Entries = append(res.Entries, Entry{Path: p, Kind: IndeterminateKind, Reason: ind.Reason, Detail: ind.Detail})
 		res.HasIndeterminate = true
 		return nil
 	}
@@ -296,7 +314,7 @@ func compareScalar(p string, l, r *doc.Node, opt Options, res *Result) error {
 	switch {
 	case ind != nil:
 		res.Entries = append(res.Entries, Entry{
-			Path: p, Kind: IndeterminateKind, Reason: ind.Reason,
+			Path: p, Kind: IndeterminateKind, Reason: ind.Reason, Detail: ind.Detail,
 			Left: &lc, Right: &rc,
 		})
 		res.HasIndeterminate = true
@@ -315,6 +333,19 @@ func compareScalar(p string, l, r *doc.Node, opt Options, res *Result) error {
 		})
 	}
 	return nil
+}
+
+// unevaluatedDetail 给出表达式差异的可见证据（左/右原文）。
+func unevaluatedDetail(l, r *doc.Node) string {
+	switch {
+	case doc.IsUnevaluated(l) && doc.IsUnevaluated(r):
+		return l.Raw + " -> " + r.Raw
+	case doc.IsUnevaluated(l):
+		return l.Raw
+	case doc.IsUnevaluated(r):
+		return r.Raw
+	}
+	return ""
 }
 
 func familyFor(p string, n *doc.Node, opt Options) value.Family {
@@ -341,7 +372,8 @@ func recordAdded(p string, n *doc.Node, opt Options, res *Result) error {
 	c, err := value.Normalize(n, p, familyFor(p, n, opt), opt.Strict)
 	if err != nil {
 		if _, ok := err.(*value.Indeterminate); ok {
-			res.Entries = append(res.Entries, Entry{Path: p, Kind: IndeterminateKind, Reason: err.(*value.Indeterminate).Reason})
+			ind := err.(*value.Indeterminate)
+			res.Entries = append(res.Entries, Entry{Path: p, Kind: IndeterminateKind, Reason: ind.Reason, Detail: ind.Detail})
 			res.HasIndeterminate = true
 			return nil
 		}
@@ -355,7 +387,8 @@ func recordRemoved(p string, n *doc.Node, opt Options, res *Result) error {
 	c, err := value.Normalize(n, p, familyFor(p, n, opt), opt.Strict)
 	if err != nil {
 		if _, ok := err.(*value.Indeterminate); ok {
-			res.Entries = append(res.Entries, Entry{Path: p, Kind: IndeterminateKind, Reason: err.(*value.Indeterminate).Reason})
+			ind := err.(*value.Indeterminate)
+			res.Entries = append(res.Entries, Entry{Path: p, Kind: IndeterminateKind, Reason: ind.Reason, Detail: ind.Detail})
 			res.HasIndeterminate = true
 			return nil
 		}

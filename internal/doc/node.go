@@ -61,6 +61,10 @@ const (
 	Unknown Format = iota
 	YAML
 	JSON
+	TOML
+	INI
+	DotEnv
+	HCL
 )
 
 func (f Format) String() string {
@@ -69,9 +73,20 @@ func (f Format) String() string {
 		return "yaml"
 	case JSON:
 		return "json"
+	case TOML:
+		return "toml"
+	case INI:
+		return "ini"
+	case DotEnv:
+		return "env"
+	case HCL:
+		return "hcl"
 	}
 	return "unknown"
 }
+
+// SupportedFormats 是错误信息里列出的完整支持面（未知扩展名必须明确报错）。
+var SupportedFormats = ".yaml/.yml/.json/.toml/.ini/.env/.hcl/.tf"
 
 // ParseError 携带 file:line:col，可直接映射到 exit 3。
 type ParseError struct {
@@ -112,19 +127,27 @@ func newParseError(file, msg string) *ParseError {
 	return pe
 }
 
-// DetectFormat 按扩展名判定；`.yaml/.yml/.json`，其余回退到内容嗅探。
-func DetectFormat(path string, data []byte) Format {
+// DetectFormat 按**扩展名**显式分派。
+//
+// 不做内容嗅探回落：`.toml` 文件以 `[service]` 开头时，任何"首字节是 [ 就当 JSON"
+// 的嗅探都会把它送进 encoding/json（M4 实测的真实缺陷）。未知扩展名返回 Unknown，
+// 由 ParseBytes 明确报错（exit 3），**绝不**静默按 YAML 解析成一个大标量。
+func DetectFormat(path string) Format {
 	switch strings.ToLower(filepath.Ext(path)) {
 	case ".yaml", ".yml":
 		return YAML
 	case ".json":
 		return JSON
+	case ".toml":
+		return TOML
+	case ".ini":
+		return INI
+	case ".env":
+		return DotEnv
+	case ".hcl", ".tf":
+		return HCL
 	}
-	trimmed := bytes.TrimSpace(data)
-	if len(trimmed) > 0 && (trimmed[0] == '{' || trimmed[0] == '[') {
-		return JSON
-	}
-	return YAML
+	return Unknown
 }
 
 // ParseFile 读文件并解析为统一文档树。
@@ -136,15 +159,34 @@ func ParseFile(path string) (*Node, Format, error) {
 	return ParseBytes(path, data)
 }
 
-// ParseBytes 解析字节。JSON 走 encoding/json（UseNumber），其余走 yaml.v3。
+// ParseBytes 解析字节：按扩展名分派到对应适配器。
 func ParseBytes(path string, data []byte) (*Node, Format, error) {
-	format := DetectFormat(path, data)
-	if format == JSON {
+	format := DetectFormat(path)
+	switch format {
+	case JSON:
 		node, err := parseJSON(path, data)
 		return node, JSON, err
+	case YAML:
+		node, err := parseYAML(path, data)
+		return node, YAML, err
+	case TOML:
+		node, err := parseTOML(path, data)
+		return node, TOML, err
+	case INI:
+		node, err := parseINI(path, data)
+		return node, INI, err
+	case DotEnv:
+		node, err := parseDotEnv(path, data)
+		return node, DotEnv, err
+	case HCL:
+		node, err := parseHCL(path, data)
+		return node, HCL, err
 	}
-	node, err := parseYAML(path, data)
-	return node, YAML, err
+	return nil, Unknown, &ParseError{
+		File: path,
+		Line: 1, Col: 1,
+		Msg: fmt.Sprintf("unsupported input format %q (supported: %s)", filepath.Ext(path), SupportedFormats),
+	}
 }
 
 func parseJSON(path string, data []byte) (*Node, error) {

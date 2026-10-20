@@ -1,0 +1,10 @@
+kind: Deployment
+spec:
+  template:
+    spec:
+      containers:
+        - name: web
+          image: registry.example/synth/web:1.0.0
+          resources:
+            limits:
+              memory: 1024Mi

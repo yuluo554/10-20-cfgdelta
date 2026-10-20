@@ -1,0 +1,7 @@
+kind: Deployment
+spec:
+  template:
+    spec:
+      containers:
+        - name: web
+          image: registry.example/synth/web:2.0.0

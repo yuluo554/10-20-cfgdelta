@@ -211,3 +211,65 @@ func TestNonStrictComparesUnknownAsIs(t *testing.T) {
 		t.Fatalf("want one changed entry, got %+v", res.Entries)
 	}
 }
+
+// M5：HCL 表达式节点。原文相同 → 无条目；原文不同 → 一等 indeterminate，
+// 并且**不带** Left/Right 的规范值（因为根本没有求值）。
+func TestUnevaluatedExpressions(t *testing.T) {
+	parseHCL := func(src string) *doc.Node {
+		n, _, err := doc.ParseBytes("inline.hcl", []byte(src))
+		if err != nil {
+			t.Fatalf("parse hcl: %v", err)
+		}
+		return n
+	}
+	a := "resource \"x\" \"y\" {\n  count = var.n\n}\n"
+	b := "resource \"x\" \"y\" {\n  count = var.n\n}\n"
+	c := "resource \"x\" \"y\" {\n  count = var.m\n}\n"
+
+	res, err := Compare(parseHCL(a), parseHCL(b), Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Entries) != 0 {
+		t.Fatalf("identical expressions must produce no entry, got %+v", res.Entries)
+	}
+
+	res, err = Compare(parseHCL(a), parseHCL(c), Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Entries) != 1 || res.Entries[0].Kind != IndeterminateKind {
+		t.Fatalf("differing expressions = %+v, want one indeterminate entry", res.Entries)
+	}
+	if res.Entries[0].Reason != value.ReasonUnevaluatedExpression {
+		t.Fatalf("reason = %q", res.Entries[0].Reason)
+	}
+	if !strings.Contains(res.Entries[0].Detail, "var.n -> var.m") {
+		t.Fatalf("detail must expose both expression texts, got %q", res.Entries[0].Detail)
+	}
+}
+
+// 表达式节点**只存在于一侧**时也必须是 indeterminate：既不能当"新增字符串"，
+// 也不能当"删除字符串"。这条钉死 value.Normalize 的 unevaluated 分支。
+func TestUnevaluatedOneSidedIsIndeterminate(t *testing.T) {
+	with := "resource \"x\" \"y\" {\n  count = var.n\n}\n"
+	without := "resource \"x\" \"y\" {\n}\n"
+	a, _, err := doc.ParseBytes("a.hcl", []byte(with))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _, err := doc.ParseBytes("b.hcl", []byte(without))
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := Compare(a, b, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Entries) != 1 || res.Entries[0].Kind != IndeterminateKind {
+		t.Fatalf("one-sided expression = %+v, want one indeterminate entry", res.Entries)
+	}
+	if res.Entries[0].Reason != value.ReasonUnevaluatedExpression {
+		t.Fatalf("reason = %q", res.Entries[0].Reason)
+	}
+}

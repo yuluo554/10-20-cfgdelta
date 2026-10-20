@@ -94,6 +94,10 @@ func InferFamilyDetailed(n *doc.Node, jsonPointer string) (fam Family, fallback 
 	if n == nil {
 		return FamilyNull, false
 	}
+	if n.Tag == doc.TagUnevaluated {
+		// HCL 表达式：没有求值器就永远无法判等，族名给 unknown，理由码由 Normalize 统一给。
+		return FamilyUnknown, false
+	}
 	if n.Tag == "!!alias" {
 		return FamilyUnknown, false
 	}
@@ -220,6 +224,11 @@ func Normalize(n *doc.Node, jsonPointer string, family Family, strict bool) (Can
 	raw := ""
 	if n != nil {
 		raw = strings.TrimSpace(n.Raw)
+	}
+
+	// 表达式节点是**一等 indeterminate**，无条件的：不等 --strict 开口（plan/01 模块 5）。
+	if doc.IsUnevaluated(n) {
+		return Canonical{}, &Indeterminate{Reason: ReasonUnevaluatedExpression, Detail: raw}
 	}
 
 	switch family {
