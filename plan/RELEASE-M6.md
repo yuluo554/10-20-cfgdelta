@@ -336,6 +336,20 @@ selftest: 76 passed, 0 failed, 0 skipped
 `扫了 0 行，无已 ✅ 里程碑`）。`plan/00` 承诺-证据台账里「单静态二进制」「发布可用性」
 两行同步翻 ✅。
 
+### 2.6 CI 稳定性观测（macOS arm64 runner）
+
+`macos-latest`（`macos-26-arm64`）在本轮共遇到 **2 次** runner 容量失败，均不是代码问题：
+
+| 发生点 | 现象 | 处置 |
+|---|---|---|
+| 首推 `39436267047` | `The job was not acquired by Runner of type hosted even after multiple attempts`（15m1s 后失败） | `gh run rerun --failed` → 36s success |
+| 末态提交 `39443304406` | 同一现象（15m1s） | `gh run rerun --failed` → 24s success；该 run 最终 `conclusion: success` |
+
+tag run（`39439782328`）里 macOS 一次就拿到 runner（24s），说明**发布时的三平台原生构建
+不受影响**；受影响的是 push 触发的高频 `test` job。不改 workflow 的理由：把 macOS 从
+push 矩阵摘掉会让 tag 上才发现 macOS 构建问题——那需要移动已经发布的 tag，代价更大。
+记在这里，是为了让"某次 push 的 macOS job 红"不被误读成代码回归。
+
 
 ## 三、覆盖对账
 
