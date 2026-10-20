@@ -27,14 +27,20 @@
 | 测试A（K8s 默认值 + 数量） | `dyff between --set-exit-code k1.yaml k2.yaml` | 4 条差异；退出码 `1` | ✅ 实测 |
 | 测试A（同谱系对照） | `diffyml k1.yaml k2.yaml` | 同样 4 条 | ✅ 实测 |
 | 测试B（Helm values 跨环境） | `dyff between --set-exit-code va.yaml vb.yaml` | 5 条差异；退出码 `1` | ✅ 实测 |
-| 测试B（confdiff 对照） | `confdiff va.yaml vb.yaml -l` | 仍 5 条 | ✅ 实测 |
-| 测试C（单位族 7 组） | 逐组两文件跑 dyff / diffyml / confdiff | 6 组误报；仅 `1.50` vs `1.5` 三家正确 | ✅ 实测 |
+| 测试B（confdiff 对照） | `confdiff va.yaml vb.yaml -l` | 6 条（**M1 复核修正，原记 5 条**）；加 `--array-set` 后 2 条 | ✅ 实测 |
+| 测试C（单位族） | 逐组两文件跑 dyff / diffyml / confdiff | **dyff 7 组全误报（C01–C07）**；diffyml 6 组；confdiff 5 组；C08 反例三家都报、C09 歧义三家都报 | ✅ 实测 |
 | 测试C 第 6 组细节 | `diffyml` 跑 `1e3` vs `1000` | 输出 `type change from float to int`，`-1000` / `+1000` | ✅ 实测 |
-| 测试D（TOML） | dyff 直接以 YAML 解析器读 TOML 文件 | `[service]` 段被判"根级新增 + 段内删除" | ✅ 实测 |
+| 测试D（TOML） | dyff 直接以 YAML 解析器读 TOML 文件 | **M1 复核：v1.12.0 已能读 TOML，属性重排报 `no differences`、rc=0**（原记"根级新增 + 段内删除"不可复现） | ⚠️ 上游已变，见下 |
 | 测试D（HCL） | dyff 读 HCL 文件 | 整个 `resource "..." "b" { }` 块被当字符串；属性重排报值变更 | ✅ 实测 |
 | 版本核对 | `dyff version` / `diffyml --version` / `confdiff --version` | 三家须分别回显 v1.12.0 / v1.8.2 / 0.17.2 | ✅ 实测 |
 
 **复现纪律**：`testdata/baseline/` 下每个工具一个目录，含 `COMMANDS.txt`（逐字命令行）、`VERSION.txt`（版本输出）、`*.out`（原始 stdout/stderr）、`exit_code.txt`。**留档必须是原样输出，不得手工修饰**；若某条在复现时不再误报（上游修了），**不删旧档，追加一条带日期的复核记录**——上游修复本身就是决策记录里风险①的触发信号。
+
+**M1 复核记录（2026-10-20，留存于 `testdata/baseline/`）**：三条与上表原记录的偏差已按纪律追加而非改写，逐条对账与原始输出见 `testdata/baseline/README.md`：
+
+1. **dyff v1.12.0 已能读 TOML** → 测试D 的 TOML 一半不再是 dyff 的失分点。**后果**：多格式差异化只能主张 HCL / INI / .env，**TOML 不得再作为差异化论据**（`plan/06` 风险 R-01 的写法同步收窄）。
+2. **`1.50` vs `1.5` 只有 diffyml / confdiff 判等，dyff 仍报差异** → 原"三家都正确"不成立；dyff 在 C01–C07 **七组全误报**。
+3. **confdiff 在测试B 用 `-l` 是 6 条**（`env` 按下标对齐）→ 引用"5 条"时必须写明 `--array-set`，否则复验者会判为口径造假。
 
 ### 1.3 需求证据（✅ 原话，逐条附编号）
 
@@ -110,7 +116,7 @@
 | K8s Quantity 文法 | Kubernetes apimachinery 公开文档 / 源码文法 | 人工核对后写入 §四（**文法本身是常量事实，不是抓取数据**） | ✅ 可直连 |
 | Go Duration 文法 | Go 官方 `time.ParseDuration` 文档 | 人工核对后写入 §四 | ✅ 可直连 |
 | YAML 1.1 布尔族 | YAML 1.1 规范 | 人工核对后写入 §四 | ✅ 可直连 |
-| K8s 默认值 | 公开 manifest 语义（API 参考文档 + 行为观察） | 写入版本化 JSON profile，逐条标注来源 | ⬜ 逐条核对中（首期 10 条，M1 落盘时补全来源列） |
+| K8s 默认值 | 公开 manifest 语义（API 参考文档 + 行为观察） | 写入版本化 JSON profile，逐条标注来源 | ✅ 已逐条核对（2026-10-20，首期 10 条；逐条证据见 `data/profiles/k8s/REVIEW-1.29.md`） |
 | golden 夹具 | 本地合成 | 见 §三 | ✅ 可自制 |
 | 三家工具基线留档 | 本地运行 dyff / diffyml / confdiff | 见 §1.2 | ✅ 已实测 |
 
@@ -265,6 +271,7 @@ number   := digits ( "." digits )?
 4. `profile` 未命中任何规则 → **降级为纯结构 diff，并在输出头部标注**（`profile_hit: 0`）；
 5. **默认值不覆盖显式值**：显式写了非默认值时，归一后与默认值不等 → 正常报差异；
 6. 默认值表**必须带版本**（`k8s/v1.29`）；未知版本 → 退出码 `3`，**不得**回落到"最近的版本"。
+7. **默认值可以是条件性的**：`imagePullPolicy` 的默认值取决于同容器 `image` 的 tag（`latest` 或无 tag → `Always`；其余 → `IfNotPresent`，K8s 1.29 `SetDefaults_Container`）。规则用 `only_if_image_tag_not_latest` 表达该条件，`internal/profile` 在**无从判定时不补**——宁可不抵消，也不猜。把条件规则当无条件常量，会造成"左 `:latest` 无 policy / 右 `:latest` 显式 `IfNotPresent`"被静默判等（假阴性）。
 
 ### 4.12 退出码（一处定义）
 

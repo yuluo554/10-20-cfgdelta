@@ -1,0 +1,20 @@
+Found four differences
+
+spec.template.spec.containers.web  (apps/v1/Deployment/synth-a)
+  + one map entry added:
+    imagePullPolicy: IfNotPresent
+
+spec.template.spec.containers.web.ports.0  (apps/v1/Deployment/synth-a)
+  + one list entry added:
+    - protocol: TCP
+
+spec.template.spec.containers.web.resources.limits.memory  (apps/v1/Deployment/synth-a)
+  ± value change
+    - 1Gi
+    + 1024Mi
+
+spec.template.spec.containers.web.resources.limits.cpu  (apps/v1/Deployment/synth-a)
+  ± type change from string to float
+    - 500m
+    + 0.5
+

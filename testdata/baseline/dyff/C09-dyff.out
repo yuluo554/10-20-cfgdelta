@@ -1,0 +1,12 @@
+     _        __  __
+   _| |_   _ / _|/ _|  between testdata/golden/testC/c09-left.yaml
+ / _' | | | | |_| |_       and testdata/golden/testC/c09-right.yaml
+| (_| | |_| |  _|  _|
+ \__,_|\__, |_| |_|   returned one difference
+        |___/
+
+limits.storage
+  ± value change
+    - 1MiB
+    + 1MB
+

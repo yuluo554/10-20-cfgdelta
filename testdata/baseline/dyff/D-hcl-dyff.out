@@ -1,0 +1,12 @@
+     _        __  __
+   _| |_   _ / _|/ _|  between testdata/golden/testD/a.hcl
+ / _' | | | | |_| |_       and testdata/golden/testD/b.hcl
+| (_| | |_| |  _|  _|
+ \__,_|\__, |_| |_|   returned one difference
+        |___/
+
+(root level)
+± value change
+  - resource "thing" "b" { count = 1 name  = "synth" }
+  + resource "thing" "b" { name  = "synth" count = 1 }
+

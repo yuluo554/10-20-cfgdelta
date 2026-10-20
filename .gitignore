@@ -17,6 +17,8 @@ coverage.html
 profile.cov
 cpu.out
 mem.out
+# 例外：竞品基线留档的原始输出就是证据，必须入库（data/README §1.2）
+!testdata/baseline/**/*.out
 
 # 依赖目录（vendored 依赖如决定入库，用 !vendor/ 显式放行）
 vendor/

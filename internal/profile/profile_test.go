@@ -43,9 +43,11 @@ func TestUnknownProfileIsError(t *testing.T) {
 }
 
 // 双侧施加：一侧显式写了默认值、另一侧没写 → 抵消后两侧相同。
+// 夹具必须带 image 且 tag 非 latest：imagePullPolicy 的默认值是条件性的（见
+// TestImagePullPolicyDependsOnImageTag），而 K8s 里 image 本身是必填字段。
 func TestApplyCancelsOnBothSides(t *testing.T) {
-	left := parse(t, "kind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n        - name: web\n")
-	right := parse(t, "kind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n        - name: web\n          imagePullPolicy: IfNotPresent\n")
+	left := parse(t, "kind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n        - name: web\n          image: registry.example/synth/web:1.0.0\n")
+	right := parse(t, "kind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n        - name: web\n          image: registry.example/synth/web:1.0.0\n          imagePullPolicy: IfNotPresent\n")
 
 	p, err := Load("k8s/v1.29")
 	if err != nil {
@@ -90,6 +92,61 @@ func TestApplyDegradesWhenNothingMatches(t *testing.T) {
 	res := Apply(n, p)
 	if !res.Degraded {
 		t.Fatalf("unmatched profile must report degraded, got %+v", res)
+	}
+}
+
+// imagePullPolicy 的默认值**取决于同容器 image 的 tag**（K8s 1.29 SetDefaults_Container
+// + ParseImageName）：`:latest` 与"完全没写 tag"都归到 Always，此时补 IfNotPresent
+// 会把"左 `:latest` 无 policy / 右 `:latest` 显式 `IfNotPresent`"这种**真实差异**抵消掉。
+func TestImagePullPolicyDependsOnImageTag(t *testing.T) {
+	cases := []struct {
+		name     string
+		image    string // 空串 = 容器没有 image 字段
+		wantFill bool
+	}{
+		{"tagged non-latest", "registry.example/synth/web:1.0.0", true},
+		{"tagged latest", "registry.example/synth/web:latest", false},
+		{"untagged (ParseImageName -> latest)", "registry.example/synth/web", false},
+		{"digest only (empty tag -> IfNotPresent)", "registry.example/synth/web@sha256:0123456789abcdef", true},
+		{"registry port is not a tag", "registry.example:5000/synth/web", false},
+		{"no image field", "", false},
+	}
+
+	p, err := Load("k8s/v1.29")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			src := "kind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n        - name: web\n"
+			if tc.image != "" {
+				src += "          image: " + tc.image + "\n"
+			}
+			n := parse(t, src)
+			Apply(n, p)
+			got := n.Get("spec").Get("template").Get("spec").Get("containers").Children[0].Get("imagePullPolicy")
+			if tc.wantFill && got == nil {
+				t.Fatalf("image %q: expected imagePullPolicy to be filled with IfNotPresent", tc.image)
+			}
+			if !tc.wantFill && got != nil {
+				t.Fatalf("image %q: imagePullPolicy must NOT be filled (API Server defaults it to Always), got %q", tc.image, got.Raw)
+			}
+		})
+	}
+}
+
+// 显式值永远不会被条件规则覆盖（与 TestApplyDoesNotOverwriteExplicit 互补）。
+func TestImagePullPolicyConditionDoesNotOverwriteExplicit(t *testing.T) {
+	n := parse(t, "kind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n        - name: web\n          image: registry.example/synth/web:latest\n          imagePullPolicy: IfNotPresent\n")
+	p, err := Load("k8s/v1.29")
+	if err != nil {
+		t.Fatal(err)
+	}
+	Apply(n, p)
+	got := n.Get("spec").Get("template").Get("spec").Get("containers").Children[0].Get("imagePullPolicy")
+	if got == nil || got.Raw != "IfNotPresent" {
+		t.Fatalf("explicit value was overwritten: %+v", got)
 	}
 }
 

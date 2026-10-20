@@ -1,0 +1,12 @@
+     _        __  __
+   _| |_   _ / _|/ _|  between testdata/golden/testC/c04-left.yaml
+ / _' | | | | |_| |_       and testdata/golden/testC/c04-right.yaml
+| (_| | |_| |  _|  _|
+ \__,_|\__, |_| |_|   returned one difference
+        |___/
+
+limits.timeout
+  ± value change
+    - 90s
+    + 1m30s
+

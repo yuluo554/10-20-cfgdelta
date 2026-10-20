@@ -13,7 +13,7 @@ It normalizes first (quantities, durations, numerics, YAML booleans), compares s
 | 里程碑 | 状态 | 说明 |
 |---|---|---|
 | M0 | ✅ 完成（2026-10-20） | 骨架 + 装订 + 布局门 + CI（本地等价校验，未接远端） |
-| M1 | 🟡 部分完成 | 夹具 + 10 条默认值 profile 已落；三家基线留档待补 |
+| M1 | ✅ 完成（2026-10-20） | golden 29 例 + 三家基线留档（40 个原样 `.out`）+ 10 条默认值逐条核对到上游源码 |
 | M2 | ⬜ 未开始 | normalize 引擎深化 |
 | M3 | ⬜ 未开始 | 结构比较深化 |
 | M4 | ⬜ 未开始 | 默认值表扩充与降级标注 |

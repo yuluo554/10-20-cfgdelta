@@ -1,0 +1,7 @@
+Found one difference
+
+(root level)
+  ± value change
+    - resource "thing" "b" { count = 1 name  = "synth" }
+    + resource "thing" "b" { name  = "synth" count = 1 }
+

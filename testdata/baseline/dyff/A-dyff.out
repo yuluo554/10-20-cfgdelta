@@ -1,0 +1,25 @@
+     _        __  __
+   _| |_   _ / _|/ _|  between testdata/golden/testA/k1.yaml
+ / _' | | | | |_| |_       and testdata/golden/testA/k2.yaml
+| (_| | |_| |  _|  _|
+ \__,_|\__, |_| |_|   returned four differences
+        |___/
+
+spec.template.spec.containers.web
+  + one map entry added:
+    imagePullPolicy: IfNotPresent
+
+spec.template.spec.containers.web.ports.0
+  + one map entry added:
+    protocol: TCP
+
+spec.template.spec.containers.web.resources.limits.memory
+  ± value change
+    - 1Gi
+    + 1024Mi
+
+spec.template.spec.containers.web.resources.limits.cpu
+  ± type change from string to float
+    - 500m
+    + 0.5
+

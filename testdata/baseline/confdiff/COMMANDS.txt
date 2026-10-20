@@ -1,0 +1,15 @@
+case=version cwd=repo-root cmd=confdiff --version
+case=A-confdiff cwd=repo-root cmd=confdiff testdata/golden/testA/k1.yaml testdata/golden/testA/k2.yaml --no-color
+case=B-confdiff cwd=repo-root cmd=confdiff testdata/golden/testB/va.yaml testdata/golden/testB/vb.yaml -l --no-color
+case=B-confdiff-array-set cwd=repo-root cmd=confdiff testdata/golden/testB/va.yaml testdata/golden/testB/vb.yaml -l --array-set --no-color
+case=C01-confdiff cwd=repo-root cmd=confdiff testdata/golden/testC/c01-left.yaml testdata/golden/testC/c01-right.yaml --no-color
+case=C02-confdiff cwd=repo-root cmd=confdiff testdata/golden/testC/c02-left.yaml testdata/golden/testC/c02-right.yaml --no-color
+case=C03-confdiff cwd=repo-root cmd=confdiff testdata/golden/testC/c03-left.yaml testdata/golden/testC/c03-right.yaml --no-color
+case=C04-confdiff cwd=repo-root cmd=confdiff testdata/golden/testC/c04-left.yaml testdata/golden/testC/c04-right.yaml --no-color
+case=C05-confdiff cwd=repo-root cmd=confdiff testdata/golden/testC/c05-left.yaml testdata/golden/testC/c05-right.yaml --no-color
+case=C06-confdiff cwd=repo-root cmd=confdiff testdata/golden/testC/c06-left.yaml testdata/golden/testC/c06-right.yaml --no-color
+case=C07-confdiff cwd=repo-root cmd=confdiff testdata/golden/testC/c07-left.yaml testdata/golden/testC/c07-right.yaml --no-color
+case=C08-confdiff cwd=repo-root cmd=confdiff testdata/golden/testC/c08-left.yaml testdata/golden/testC/c08-right.yaml --no-color
+case=C09-confdiff cwd=repo-root cmd=confdiff testdata/golden/testC/c09-left.yaml testdata/golden/testC/c09-right.yaml --no-color
+case=D-toml-confdiff cwd=repo-root cmd=confdiff testdata/golden/testD/a.toml testdata/golden/testD/b.toml --no-color
+case=D-hcl-confdiff cwd=repo-root cmd=confdiff testdata/golden/testD/a.hcl testdata/golden/testD/b.hcl --no-color

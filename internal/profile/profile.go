@@ -26,6 +26,16 @@ type Rule struct {
 	Default string `json:"default"`
 	Family  string `json:"family"`
 	Source  string `json:"source"`
+
+	// OnlyIfImageTagNotLatest 标记"默认值取决于同容器 image 的 tag"的规则。
+	//
+	// API Server 的 imagePullPolicy 默认值不是常量：tag 为 `latest`（**含完全没写
+	// tag**——parsers.ParseImageName 会把空 tag 归一成 `latest`）时默认 `Always`，
+	// 其余 `IfNotPresent`（K8s 1.29 pkg/apis/core/v1/defaults.go SetDefaults_Container）。
+	// 把这条规则当成无条件 `IfNotPresent` 会造成两个方向的误判：
+	// 左 `:latest` 无 policy / 右 `:latest` 显式 `Always` → 假阳性；
+	// 左 `:latest` 无 policy / 右 `:latest` 显式 `IfNotPresent` → **假阴性（更危险）**。
+	OnlyIfImageTagNotLatest bool `json:"only_if_image_tag_not_latest,omitempty"`
 }
 
 // Profile 是一份版本化默认值表。
@@ -153,6 +163,11 @@ func insertDefault(n *doc.Node, segs []string, r Rule) bool {
 	if len(segs) != 1 {
 		return false
 	}
+	// 条件性默认值：image tag 为 latest（或无 tag）时 API Server 给的是 Always，
+	// 此时补 IfNotPresent 会把真实差异"抵消"掉（假阴性）。
+	if r.OnlyIfImageTagNotLatest && !imageTagNotLatest(n) {
+		return false
+	}
 	key := &doc.Node{Kind: doc.Scalar, Tag: "!!str", Style: 0, Raw: seg}
 	val := &doc.Node{Kind: doc.Scalar, Tag: "!!str", Style: 0, Raw: r.Default}
 	switch r.Family {
@@ -171,6 +186,46 @@ func kindOf(root *doc.Node) string {
 		return ""
 	}
 	return kv.Raw
+}
+
+// imageTagNotLatest 复刻 K8s 的 imagePullPolicy 默认值判定（K8s 1.29）：
+//
+//	SetDefaults_Container: tag == "latest" ? Always : IfNotPresent
+//	parsers.ParseImageName: 既无 tag 又无 digest 时，把 tag 归一为 "latest"
+//
+// 所以"无 tag"与"tag=latest"都**不满足**本条件；带 digest 且无 tag 的是空 tag，
+// 落到 IfNotPresent，满足本条件。没有 image 字段时无从判定 → 不补（宁可不抵消，也不猜）。
+func imageTagNotLatest(container *doc.Node) bool {
+	if container == nil || container.Kind != doc.Mapping {
+		return false
+	}
+	img := container.Get("image")
+	if img == nil || img.Raw == "" {
+		return false
+	}
+	hasDigest := strings.Contains(img.Raw, "@")
+	tag := imageTagOf(img.Raw)
+	if tag == "" {
+		// 无 tag：有 digest → ParseImageName 保留空 tag（→ IfNotPresent）；否则归一为 latest。
+		return hasDigest
+	}
+	return tag != "latest"
+}
+
+// imageTagOf 抽出镜像引用的 tag（不含 digest）。registry 端口（registry:5000/img）
+// 不是 tag，所以只看最后一个 path segment。
+func imageTagOf(image string) string {
+	base := image
+	if i := strings.Index(base, "@"); i >= 0 {
+		base = base[:i]
+	}
+	if i := strings.LastIndex(base, "/"); i >= 0 {
+		base = base[i+1:]
+	}
+	if i := strings.LastIndex(base, ":"); i >= 0 {
+		return base[i+1:]
+	}
+	return ""
 }
 
 func splitPointer(p string) []string {

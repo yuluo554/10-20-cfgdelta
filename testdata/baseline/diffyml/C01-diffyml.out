@@ -1,0 +1,7 @@
+Found one difference
+
+limits.memory
+  ± value change
+    - 1Gi
+    + 1024Mi
+

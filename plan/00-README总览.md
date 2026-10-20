@@ -83,8 +83,8 @@
 | `gate --fail-on` 选择性阻断 | 决策（门禁语义） | CLI `gate` 子命令 | 未列出的行为差异不阻断断言 | ⬜ 待 M4 实现 |
 | TOML/INI/.env/HCL 适配 | 测试D 实测 | M5 适配器 | 测试D TOML 零噪声 + HCL 重排零差异 | ⬜ 待 M5 实现 |
 | HCL 不求值 | 决策（只做结构解析） | M5 `unevaluated` 标注 | 表达式节点标注断言 | ⬜ 待 M5 实现 |
-| golden 四组夹具 | 测试A/B/C/D 实测 | `testdata/golden/` | `selftest` 一条命令全跑 | ⬜ 待 M1 落盘 |
-| 三家基线留档 | dyff v1.12.0 / diffyml v1.8.2 / confdiff 0.17.2 实测 | `testdata/baseline/` | 留档含版本 + 命令 + 输出 | ⬜ 待 M1 落盘 |
+| golden 四组夹具 | 测试A/B/C/D 实测 | `testdata/golden/` | `selftest` 一条命令全跑 | ✅ 已落盘（29 例，27 pass / 2 显式 skip） |
+| 三家基线留档 | dyff v1.12.0 / diffyml v1.8.2 / confdiff 0.17.2 实测 | `testdata/baseline/` | 留档含版本 + 命令 + 输出 | ✅ 已落盘（40 个 `.out` + 四件齐全守门） |
 | 单静态二进制 | 形态决策 | Release 附件 | 干净机器直接运行；`file` / 依赖检查 | ⬜ 待 M6 验证 |
 | README 首屏 4→0 对照 | 测试A golden | `docs/testA-before-after.png` | 文件存在 + 内容与 golden 一致 | ⬜ 待 M3 后补 |
 | 发布可用性 | GitHub Releases | 源码 + 二进制 + SHA256SUMS | 干净环境 clone 跑通 README；真下载 sha256 复验 | ⬜ 待 M6 |
@@ -97,7 +97,7 @@
 | 里程碑 | 内容 | DoD 要点 | 状态 |
 |---|---|---|---|
 | **M0 装订与骨架** | 第零步装订（AGENTS.md + 布局门 + plan/00 装订行）+ plan/00–06 + Go 骨架（5 子命令）+ CI | 布局门 9 组变异全红；`go vet` / `go test` / `selftest` 全绿；单静态二进制可跑；CI workflow 本地解析通过 | ✅ 完成（2026-10-20，本地等价校验，未接远端） |
-| **M1 数据先行** | golden 四组夹具（测试A/B/C/D）+ 三家基线留档 + 10 条默认值表 + `plan/02`/`03`/`04` 落盘 | 夹具最小可复现；基线留档含版本号与调用命令；默认值表为版本化 JSON 且每条带来源标注；`plan/03` 模块数与 plan/01 一致 | 🟡 部分完成（夹具与 profile 已落，基线留档待补） |
+| **M1 数据先行** | golden 四组夹具（测试A/B/C/D）+ 三家基线留档 + 10 条默认值表 + `plan/02`/`03`/`04` 落盘 | 夹具最小可复现；基线留档含版本号与调用命令；默认值表为版本化 JSON 且每条带来源标注；`plan/03` 模块数与 plan/01 一致 | ✅ 完成（2026-10-20：三家 40 个 `.out` 留档 + 守门 7 组变异全红；10 条规则逐条核对到上游源码，抓出并修掉 1 条条件性默认值） |
 | **M2 归一化** | M1 模块（normalize 引擎）：Quantity / Duration / 十进制 / 布尔族 / null 三态 / `indeterminate` | 测试C 七组 100% 判等；`1Gi` vs `1000M` 判不等；`MB` vs `MiB` 判 indeterminate 且带理由码；浮点禁令有静态拦截；双跑字节一致 | ⬜ 待开工 |
 | **M3 结构比较** | M2 模块（diff 引擎）：键序无关 / 序列三模式 / 注释零噪声 | 四类结构差异零条目；`keyed:` 重复键报错；`set` 乱序零差异；双跑字节一致 | ⬜ 待开工 |
 | **M4 默认值** | M3 模块（profile）：双侧施加 + 抵消 + 未命中降级 | **测试A 4 条 → 0 条**；显式非默认对照组仍报 1 条；未知 profile 版本明确报错；`--dump-normalized` 可见双侧默认值 | ⬜ 待开工 |

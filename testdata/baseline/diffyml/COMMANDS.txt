@@ -1,0 +1,14 @@
+case=version cwd=repo-root cmd=diffyml --version
+case=A-diffyml cwd=repo-root cmd=diffyml testdata/golden/testA/k1.yaml testdata/golden/testA/k2.yaml
+case=A-diffyml-exitcode cwd=repo-root cmd=diffyml --set-exit-code testdata/golden/testA/k1.yaml testdata/golden/testA/k2.yaml
+case=C01-diffyml cwd=repo-root cmd=diffyml testdata/golden/testC/c01-left.yaml testdata/golden/testC/c01-right.yaml
+case=C02-diffyml cwd=repo-root cmd=diffyml testdata/golden/testC/c02-left.yaml testdata/golden/testC/c02-right.yaml
+case=C03-diffyml cwd=repo-root cmd=diffyml testdata/golden/testC/c03-left.yaml testdata/golden/testC/c03-right.yaml
+case=C04-diffyml cwd=repo-root cmd=diffyml testdata/golden/testC/c04-left.yaml testdata/golden/testC/c04-right.yaml
+case=C05-diffyml cwd=repo-root cmd=diffyml testdata/golden/testC/c05-left.yaml testdata/golden/testC/c05-right.yaml
+case=C06-diffyml cwd=repo-root cmd=diffyml testdata/golden/testC/c06-left.yaml testdata/golden/testC/c06-right.yaml
+case=C07-diffyml cwd=repo-root cmd=diffyml testdata/golden/testC/c07-left.yaml testdata/golden/testC/c07-right.yaml
+case=C08-diffyml cwd=repo-root cmd=diffyml testdata/golden/testC/c08-left.yaml testdata/golden/testC/c08-right.yaml
+case=C09-diffyml cwd=repo-root cmd=diffyml testdata/golden/testC/c09-left.yaml testdata/golden/testC/c09-right.yaml
+case=D-toml-diffyml cwd=repo-root cmd=diffyml testdata/golden/testD/a.toml testdata/golden/testD/b.toml
+case=D-hcl-diffyml cwd=repo-root cmd=diffyml testdata/golden/testD/a.hcl testdata/golden/testD/b.hcl

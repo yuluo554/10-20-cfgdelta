@@ -1,0 +1,14 @@
+version=0
+A-diffyml=0
+A-diffyml-exitcode=1
+C01-diffyml=0
+C02-diffyml=0
+C03-diffyml=0
+C04-diffyml=0
+C05-diffyml=0
+C06-diffyml=0
+C07-diffyml=0
+C08-diffyml=0
+C09-diffyml=0
+D-toml-diffyml=255
+D-hcl-diffyml=0

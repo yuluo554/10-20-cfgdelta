@@ -1,0 +1,7 @@
+Found one difference
+
+limits.storage
+  ± value change
+    - 1MiB
+    + 1MB
+

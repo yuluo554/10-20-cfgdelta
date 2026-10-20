@@ -1,0 +1,12 @@
+     _        __  __
+   _| |_   _ / _|/ _|  between testdata/golden/testC/c06-left.yaml
+ / _' | | | | |_| |_       and testdata/golden/testC/c06-right.yaml
+| (_| | |_| |  _|  _|
+ \__,_|\__, |_| |_|   returned one difference
+        |___/
+
+limits.q
+  ± type change from float to int
+    - 1e3
+    + 1000
+

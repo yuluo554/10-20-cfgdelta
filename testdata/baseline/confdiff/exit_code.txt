@@ -1,0 +1,15 @@
+version=0
+A-confdiff=1
+B-confdiff=1
+B-confdiff-array-set=1
+C01-confdiff=1
+C02-confdiff=1
+C03-confdiff=1
+C04-confdiff=1
+C05-confdiff=1
+C06-confdiff=0
+C07-confdiff=0
+C08-confdiff=1
+C09-confdiff=1
+D-toml-confdiff=0
+D-hcl-confdiff=1

@@ -1,0 +1,3 @@
+~ limits.memory  "1Gi" => "1024Mi"
+
+1 change: 1 changed

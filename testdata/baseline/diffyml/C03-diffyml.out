@@ -1,0 +1,7 @@
+Found one difference
+
+limits.cpu
+  ± type change from string to int
+    - 8000m
+    + 8
+

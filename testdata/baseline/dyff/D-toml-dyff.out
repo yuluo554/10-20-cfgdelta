@@ -1,0 +1,7 @@
+     _        __  __
+   _| |_   _ / _|/ _|  between testdata/golden/testD/a.toml
+ / _' | | | | |_| |_       and testdata/golden/testD/b.toml
+| (_| | |_| |  _|  _|
+ \__,_|\__, |_| |_|   returned no differences
+        |___/
+

@@ -8,70 +8,71 @@
       "path": "/spec/template/spec/containers/*/imagePullPolicy",
       "default": "IfNotPresent",
       "family": "string",
-      "source": "API Server defaulting: imagePullPolicy defaults to IfNotPresent when the tag is neither latest nor empty (K8s 1.29)"
+      "only_if_image_tag_not_latest": true,
+      "source": "K8s 1.29 pkg/apis/core/v1/defaults.go SetDefaults_Container: tag==\"latest\" -> Always, else -> IfNotPresent; pkg/util/parsers/parsers.go ParseImageName turns an absent tag into \"latest\". Condition is required, not cosmetic: a container whose image is :latest (or untagged) is defaulted to Always by the API Server, so filling IfNotPresent there would cancel a real difference."
     },
     {
       "kind": "",
       "path": "/spec/template/spec/containers/*/ports/*/protocol",
       "default": "TCP",
       "family": "string",
-      "source": "API Server defaulting: ContainerPort.protocol defaults to TCP (K8s 1.29)"
+      "source": "K8s 1.29 pkg/apis/core/v1/zz_generated.defaults.go: ContainerPort.Protocol == \"\" -> \"TCP\" (generated from the ContainerPort defaulting func; behavior pinned by pkg/apis/core/v1/defaults_test.go case \"ContainerPort\"). Unconditional."
     },
     {
       "kind": "Pod",
       "path": "/spec/containers/*/ports/*/protocol",
       "default": "TCP",
       "family": "string",
-      "source": "API Server defaulting: ContainerPort.protocol defaults to TCP (K8s 1.29)"
+      "source": "K8s 1.29 pkg/apis/core/v1/zz_generated.defaults.go: ContainerPort.Protocol == \"\" -> \"TCP\" (same defaulting func as the Deployment path, applied to a bare Pod's container list). Unconditional."
     },
     {
       "kind": "Deployment",
       "path": "/spec/template/spec/terminationGracePeriodSeconds",
       "default": "30",
       "family": "int",
-      "source": "API Server defaulting: PodSpec.terminationGracePeriodSeconds defaults to 30 (K8s 1.29)"
+      "source": "K8s 1.29 pkg/apis/core/v1/defaults.go SetDefaults_PodSpec: nil -> DefaultTerminationGracePeriodSeconds; the constant is 30 in k8s.io/api core/v1/types.go. Unconditional."
     },
     {
       "kind": "Deployment",
       "path": "/spec/template/spec/restartPolicy",
       "default": "Always",
       "family": "string",
-      "source": "API Server defaulting: PodSpec.restartPolicy defaults to Always (K8s 1.29)"
+      "source": "K8s 1.29 pkg/apis/core/v1/defaults.go SetDefaults_PodSpec: empty -> RestartPolicyAlways. Unconditional."
     },
     {
       "kind": "Deployment",
       "path": "/spec/template/spec/dnsPolicy",
       "default": "ClusterFirst",
       "family": "string",
-      "source": "API Server defaulting: PodSpec.dnsPolicy defaults to ClusterFirst (K8s 1.29)"
+      "source": "K8s 1.29 pkg/apis/core/v1/defaults.go SetDefaults_PodSpec: empty -> DNSClusterFirst. Unconditional."
     },
     {
       "kind": "Deployment",
       "path": "/spec/template/spec/serviceAccountName",
       "default": "default",
       "family": "string",
-      "source": "API Server defaulting: PodSpec.serviceAccountName defaults to 'default' (K8s 1.29)"
+      "source": "K8s 1.29 plugin/pkg/admission/serviceaccount/admission.go: DefaultServiceAccountName = \"default\"; the plugin sets spec.serviceAccountName when empty. NOTE: this is an admission-plugin default, not registry defaulting -- it materializes only when the ServiceAccount admission plugin is enabled (it is in default kube-apiserver installs)."
     },
     {
       "kind": "Deployment",
       "path": "/spec/revisionHistoryLimit",
       "default": "10",
       "family": "int",
-      "source": "API Server defaulting: DeploymentSpec.revisionHistoryLimit defaults to 10 (K8s 1.29)"
+      "source": "K8s 1.29 pkg/apis/apps/v1/defaults.go SetDefaults_Deployment: nil -> 10. Unconditional."
     },
     {
       "kind": "Deployment",
       "path": "/spec/strategy/type",
       "default": "RollingUpdate",
       "family": "string",
-      "source": "API Server defaulting: DeploymentStrategy.type defaults to RollingUpdate (K8s 1.29)"
+      "source": "K8s 1.29 pkg/apis/apps/v1/defaults.go SetDefaults_DeploymentStrategy: empty -> RollingUpdateDeploymentStrategyType. Unconditional."
     },
     {
       "kind": "Deployment",
       "path": "/spec/progressDeadlineSeconds",
       "default": "600",
       "family": "int",
-      "source": "API Server defaulting: DeploymentSpec.progressDeadlineSeconds defaults to 600 (K8s 1.29)"
+      "source": "K8s 1.29 pkg/apis/apps/v1/defaults.go SetDefaults_Deployment: nil -> 600. Unconditional."
     }
   ]
 }

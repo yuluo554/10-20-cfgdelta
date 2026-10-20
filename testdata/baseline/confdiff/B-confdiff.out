@@ -1,0 +1,8 @@
+~ env[0].name              "LOG_LEVEL" => "MODE"
+~ env[0].value             "info" => "prod"
+~ env[1].name              "MODE" => "LOG_LEVEL"
+~ env[1].value             "prod" => "info"
+~ resources.limits.cpu    (type)  "500m" => 0.5
+~ resources.limits.memory  "1Gi" => "1024Mi"
+
+6 changes: 6 changed

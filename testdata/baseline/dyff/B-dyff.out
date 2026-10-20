@@ -1,0 +1,32 @@
+     _        __  __
+   _| |_   _ / _|/ _|  between testdata/golden/testB/va.yaml
+ / _' | | | | |_| |_       and testdata/golden/testB/vb.yaml
+| (_| | |_| |  _|  _|
+ \__,_|\__, |_| |_|   returned five differences
+        |___/
+
+replicaCount
+  ± type change from int to string
+    - 3
+    + "3"
+
+image.tag
+  ± type change from string to float
+    - "1.25"
+    + 1.25
+
+resources.limits.cpu
+  ± type change from string to float
+    - 500m
+    + 0.5
+
+resources.limits.memory
+  ± value change
+    - 1Gi
+    + 1024Mi
+
+env
+  ⇆ order changed
+    - LOG_LEVEL, MODE
+    + MODE, LOG_LEVEL
+
