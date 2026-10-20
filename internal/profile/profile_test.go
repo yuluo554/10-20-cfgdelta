@@ -1,6 +1,7 @@
 package profile
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/yuluo554/10-20-cfgdelta/internal/doc"
@@ -79,6 +80,65 @@ func TestApplyDoesNotOverwriteExplicit(t *testing.T) {
 	got := n.Get("spec").Get("template").Get("spec").Get("containers").Children[0].Get("imagePullPolicy")
 	if got == nil || got.Raw != "Always" {
 		t.Fatalf("explicit value was overwritten: %+v", got)
+	}
+}
+
+// 施加顺序必须可观测（§4.11 第 2/3 条）：外层先于内层、父先于子、
+// 同层按路径 UTF-8 字节序。只断言"最终值"看不出顺序，所以 Apply 返回
+// 逐个补上的具体路径（Applied），这里对**顺序本身**断言。
+func TestApplyOrderIsOuterFirstThenBytewise(t *testing.T) {
+	// 两个容器、各一个端口：通配符必须展开，且展开顺序确定。
+	n := parse(t, "kind: Deployment\n"+
+		"spec:\n"+
+		"  template:\n"+
+		"    spec:\n"+
+		"      containers:\n"+
+		"        - name: b\n"+
+		"          image: registry.example/synth/b:1.0.0\n"+
+		"          ports:\n"+
+		"            - containerPort: 80\n"+
+		"        - name: a\n"+
+		"          image: registry.example/synth/a:1.0.0\n"+
+		"          ports:\n"+
+		"            - containerPort: 81\n")
+
+	p, err := Load("k8s/v1.29")
+	if err != nil {
+		t.Fatal(err)
+	}
+	res := Apply(n, p)
+
+	want := []string{
+		// 深度 2：同层按字节序 progressDeadlineSeconds < revisionHistoryLimit
+		"/spec/progressDeadlineSeconds",
+		"/spec/revisionHistoryLimit",
+		// 深度 3：strategy 缺失（中间层不猜结构）→ 不补，故不出现
+		// 深度 4：同层字节序
+		"/spec/template/spec/dnsPolicy",
+		"/spec/template/spec/restartPolicy",
+		"/spec/template/spec/serviceAccountName",
+		"/spec/template/spec/terminationGracePeriodSeconds",
+		// 深度 6：父先于子（容器内的键晚于 spec 层）
+		"/spec/template/spec/containers/0/imagePullPolicy",
+		"/spec/template/spec/containers/1/imagePullPolicy",
+		// 深度 8：最深，最后
+		"/spec/template/spec/containers/0/ports/0/protocol",
+		"/spec/template/spec/containers/1/ports/0/protocol",
+	}
+	if strings.Join(res.Applied, "\n") != strings.Join(want, "\n") {
+		t.Fatalf("apply order = \n%s\nwant \n%s", strings.Join(res.Applied, "\n"), strings.Join(want, "\n"))
+	}
+	if res.Hits != len(want) {
+		t.Fatalf("hits = %d, want %d (one per concrete path)", res.Hits, len(want))
+	}
+	if res.Degraded {
+		t.Fatal("a document that matched 10 rules must not be reported as degraded")
+	}
+
+	// 反证：顺序**不是** profile 文件的书写顺序（JSON 里 imagePullPolicy 排第一），
+	// 否则"同层按字节序"只是文档里的一句话。
+	if strings.HasPrefix(res.Applied[0], "/spec/template/spec/containers") {
+		t.Fatalf("apply order follows the profile file order, not path order: %v", res.Applied)
 	}
 }
 

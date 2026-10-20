@@ -1,0 +1,7 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: r08
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3

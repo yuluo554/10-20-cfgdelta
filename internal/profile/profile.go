@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/fs"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/yuluo554/10-20-cfgdelta/internal/doc"
@@ -93,6 +94,11 @@ func Names() ([]string, error) {
 type ApplyResult struct {
 	Hits     int
 	Degraded bool // 未命中任何规则 → 明确降级为纯结构 diff
+
+	// Applied 是按施加顺序记录的**具体路径**（通配符已展开到下标/键）。
+	// 它让 §4.11 的施加顺序（外层先于内层、父先于子、同层路径字节序）
+	// 成为可断言的事实，而不是只存在于文档里的承诺。
+	Applied []string
 }
 
 // Apply 对整棵文档树**双侧**施加默认值（§4.11）。
@@ -103,70 +109,85 @@ func Apply(root *doc.Node, p *Profile) ApplyResult {
 	if p == nil || root == nil {
 		return ApplyResult{Degraded: true}
 	}
-	hits := 0
 	kind := kindOf(root)
-	for _, r := range p.Rules {
+	var applied []string
+	for _, r := range orderedRules(p.Rules, kind) {
+		applied = append(applied, applyRule(root, r)...)
+	}
+	return ApplyResult{Hits: len(applied), Degraded: len(applied) == 0, Applied: applied}
+}
+
+// orderedRules 过滤出适用于本文档 kind 的规则，并按 §4.11 排序：
+// 路径段数少的先（外层/父先于内层/子），同层按路径 UTF-8 字节序。
+//
+// 纪律：顺序由路径推导，**不**由 profile JSON 的书写顺序决定——否则
+// "同层按字节序"只是一句没有实现的文档。
+func orderedRules(rules []Rule, kind string) []Rule {
+	out := make([]Rule, 0, len(rules))
+	for _, r := range rules {
 		if r.Kind != "" && !strings.EqualFold(r.Kind, kind) {
 			continue
 		}
-		if applyRule(root, r) {
-			hits++
-		}
+		out = append(out, r)
 	}
-	return ApplyResult{Hits: hits, Degraded: hits == 0}
+	sort.SliceStable(out, func(i, j int) bool {
+		di, dj := len(splitPointer(out[i].Path)), len(splitPointer(out[j].Path))
+		if di != dj {
+			return di < dj
+		}
+		return out[i].Path < out[j].Path
+	})
+	return out
 }
 
-func applyRule(root *doc.Node, r Rule) bool {
+func applyRule(root *doc.Node, r Rule) []string {
 	segs := splitPointer(r.Path)
 	if len(segs) == 0 {
-		return false
+		return nil
 	}
-	return insertDefault(root, segs, r)
+	return insertDefault(root, "", segs, r)
 }
 
-func insertDefault(n *doc.Node, segs []string, r Rule) bool {
+// insertDefault 返回实际补上的具体路径（可能多条：`*` 会展开到每个元素）。
+func insertDefault(n *doc.Node, p string, segs []string, r Rule) []string {
 	if n == nil || len(segs) == 0 {
-		return false
+		return nil
 	}
 	seg := segs[0]
 
 	// 序列 + 通配：对每个元素递归（`containers/*/imagePullPolicy` 的形态）。
 	if seg == "*" && n.Kind == doc.Sequence {
-		hit := false
-		for _, item := range n.Children {
-			if insertDefault(item, segs[1:], r) {
-				hit = true
-			}
+		var out []string
+		for i, item := range n.Children {
+			out = append(out, insertDefault(item, value.JoinPointer(p, strconv.Itoa(i)), segs[1:], r)...)
 		}
-		return hit
+		return out
 	}
 
 	if n.Kind != doc.Mapping {
-		return false
+		return nil
 	}
 
 	if seg == "*" {
-		hit := false
+		var out []string
 		for i := 0; i+1 < len(n.Children); i += 2 {
-			if insertDefault(n.Children[i+1], segs[1:], r) {
-				hit = true
-			}
+			out = append(out, insertDefault(n.Children[i+1], value.JoinPointer(p, n.Children[i].Raw), segs[1:], r)...)
 		}
-		return hit
+		return out
 	}
 
 	if child := n.Get(seg); child != nil {
-		return insertDefault(child, segs[1:], r)
+		return insertDefault(child, value.JoinPointer(p, seg), segs[1:], r)
 	}
 
 	// 键不存在：只在**最后一个段**补默认值；中间层缺失不猜结构。
 	if len(segs) != 1 {
-		return false
+		return nil
 	}
 	// 条件性默认值：image tag 为 latest（或无 tag）时 API Server 给的是 Always，
 	// 此时补 IfNotPresent 会把真实差异"抵消"掉（假阴性）。
 	if r.OnlyIfImageTagNotLatest && !imageTagNotLatest(n) {
-		return false
+		return nil
 	}
 	key := &doc.Node{Kind: doc.Scalar, Tag: "!!str", Style: 0, Raw: seg}
 	val := &doc.Node{Kind: doc.Scalar, Tag: "!!str", Style: 0, Raw: r.Default}
@@ -177,7 +198,7 @@ func insertDefault(n *doc.Node, segs []string, r Rule) bool {
 		val.Tag = "!!int"
 	}
 	n.Children = append(n.Children, key, val)
-	return true
+	return []string{value.JoinPointer(p, seg)}
 }
 
 func kindOf(root *doc.Node) string {

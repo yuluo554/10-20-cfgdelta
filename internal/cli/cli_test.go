@@ -108,7 +108,8 @@ func TestOutputIsDeterministic(t *testing.T) {
 	}
 }
 
-// --dump-normalized 必须让人看见双侧默认值同时出现（测试A 的卖点）。
+// --dump-normalized 必须让人看见双侧默认值同时出现（测试A 的卖点），
+// 并且头部要报出**施加次数**（hits）——只打印"profile 已加载"看不出到底补了几个键。
 func TestDumpNormalizedShowsBothSides(t *testing.T) {
 	_, out, _ := run("diff", "--profile", "k8s/v1.29", "--dump-normalized",
 		"../../testdata/golden/testA/k1.yaml", "../../testdata/golden/testA/k2.yaml")
@@ -122,6 +123,30 @@ func TestDumpNormalizedShowsBothSides(t *testing.T) {
 	}
 	if !strings.Contains(parts[0], "imagePullPolicy") || !strings.Contains(parts[1], "imagePullPolicy") {
 		t.Fatalf("both sides must show imagePullPolicy after defaulting:\n%s", out)
+	}
+
+	// hits = 左 8 + 右 6（测试A 的 k1 缺 8 个默认值键，k2 显式写了 imagePullPolicy 与
+	// protocol，故缺 6 个）。按规则表可直接推出，不是观测值。
+	head := strings.SplitN(out, "\n", 2)[0]
+	if !strings.Contains(head, "profile k8s/v1.29 (hits: 14)") {
+		t.Fatalf("header must report the defaulting hit count:\n%s", head)
+	}
+
+	// 缺失键必须真的被补齐（左树为证）：这是"默认值参与了比较"的直接证据。
+	leftTree := parts[0]
+	for _, want := range []string{
+		"imagePullPolicy: IfNotPresent",
+		"protocol: TCP",
+		"progressDeadlineSeconds: 600",
+		"revisionHistoryLimit: 10",
+		"dnsPolicy: ClusterFirst",
+		"restartPolicy: Always",
+		"serviceAccountName: default",
+		"terminationGracePeriodSeconds: 30",
+	} {
+		if !strings.Contains(leftTree, want) {
+			t.Fatalf("left tree must show the filled default %q:\n%s", want, leftTree)
+		}
 	}
 }
 

@@ -262,6 +262,48 @@ addCase(
   ["~ /a~1b", "~ /c~0d"],
 );
 
+// ── M4 默认值：10 条规则逐条 + 未命中降级 ──────────────────────────────────
+// 真值由 §4.11 推导，不依赖本引擎：
+//   ① 一侧缺键、另一侧**显式写默认值** → 双侧施加后相同 → 0 条（抵消）；
+//   ② 另一侧**显式写非默认值** → 只有该键不等 → 恰好 1 条行为差异（证明没有过度静默）。
+// ①与②必须成对：单看①，"引擎什么都不做 + 夹具写错"也能凑出 0 条；成对后两者
+// 互为反证——不做默认值则①变红，覆盖显式值则②变红。
+const ruleCases = [
+  ["01", "/spec/template/spec/containers/0/imagePullPolicy", "string:IfNotPresent -> string:Always", "imagePullPolicy (conditional on a non-latest image tag)"],
+  ["02", "/spec/template/spec/containers/0/ports/0/protocol", "string:TCP -> string:UDP", "container port protocol under a Deployment template"],
+  ["03", "/spec/containers/0/ports/0/protocol", "string:TCP -> string:UDP", "container port protocol on a bare Pod"],
+  ["04", "/spec/template/spec/terminationGracePeriodSeconds", "decimal:30/1 -> decimal:60/1", "terminationGracePeriodSeconds"],
+  ["05", "/spec/template/spec/restartPolicy", "string:Always -> string:Never", "restartPolicy"],
+  ["06", "/spec/template/spec/dnsPolicy", "string:ClusterFirst -> string:Default", "dnsPolicy"],
+  ["07", "/spec/template/spec/serviceAccountName", "string:default -> string:build-bot", "serviceAccountName"],
+  ["08", "/spec/revisionHistoryLimit", "decimal:10/1 -> decimal:3/1", "revisionHistoryLimit"],
+  ["09", "/spec/strategy/type", "string:RollingUpdate -> string:Recreate", "strategy.type"],
+  ["10", "/spec/progressDeadlineSeconds", "decimal:600/1 -> decimal:120/1", "progressDeadlineSeconds"],
+];
+for (const [id, path, transition, note] of ruleCases) {
+  addCase(
+    `testM4-rule${id}-cancel`,
+    ["diff", "--profile", "k8s/v1.29", `testM4/rule${id}-left.yaml`, `testM4/rule${id}-default-right.yaml`],
+    0, 0, 0, [],
+    `rule ${id} (${note}): an omitted key cancels against an explicit default value`,
+  );
+  addCase(
+    `testM4-rule${id}-nondefault`,
+    ["diff", "--profile", "k8s/v1.29", `testM4/rule${id}-left.yaml`, `testM4/rule${id}-nondefault-right.yaml`],
+    1, 1, 0, [],
+    `rule ${id}: an explicit non-default value is still reported (no over-silencing)`,
+    [path, transition],
+  );
+}
+// 未命中任何规则 → 头部必须写明降级，且 hits 为 0；绝不静默假装已比较（K-09）。
+addCase(
+  "testM4-degraded-header",
+  ["diff", "--profile", "k8s/v1.29", "testM4/degraded-left.yaml", "testM4/degraded-right.yaml"],
+  1, 1, 0, [],
+  "a ConfigMap matches no rule: header announces degraded: structural-only with hits: 0",
+  ["degraded: structural-only", "hits: 0"],
+);
+
 // ── 分类与门禁（五类各一例 + 选择性阻断）────────────────────────────────────
 addCase(
   "classify-resource-shrink",
@@ -358,7 +400,7 @@ if (orphans.length > 0) {
 const manifest = {
   generated_by: "tools/gen-golden-manifest.mjs",
   scope_note:
-    "Covers the four red-teamed families (A/B/C/D), the 10 defaulting rules in data/profiles/k8s/v1.29.json, the §4.1/§4.2 grammar boundaries, and the M3 structural-comparison cases (four noise classes / sequence modes / RFC 6901 paths). NOT full Kubernetes semantics.",
+    "Covers the four red-teamed families (A/B/C/D), every one of the 10 defaulting rules in data/profiles/k8s/v1.29.json (each rule has a cancel case plus an explicit non-default control), the unmatched-profile degraded header, the §4.1/§4.2 grammar boundaries, and the M3 structural-comparison cases (four noise classes / sequence modes / RFC 6901 paths). NOT full Kubernetes semantics.",
   cases: cases.sort((a, b) => (a.case < b.case ? -1 : a.case > b.case ? 1 : 0)),
 };
 

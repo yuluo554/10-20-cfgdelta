@@ -266,9 +266,9 @@ number   := digits ( "." digits )?
 ### 4.11 默认值施加顺序
 
 1. **双侧同时施加**：左侧与右侧都先施加 profile 默认值，再比较（单侧施加会把"一侧写了默认值、一侧没写"误判为差异）；
-2. **外层先于内层，父先于子**；
-3. **同层按路径的 UTF-8 字节序**；
-4. `profile` 未命中任何规则 → **降级为纯结构 diff，并在输出头部标注**（`profile_hit: 0`）；
+2. **外层先于内层，父先于子**（路径段数少的先）；
+3. **同层按路径的 UTF-8 字节序**；顺序由路径推导，不随 profile JSON 的书写顺序漂移（`ApplyResult.Applied` 逐条记录实际补齐的具体路径，供断言）；
+4. `profile` 未命中任何规则（双侧 `hits` 都为 0）→ **降级为纯结构 diff，并在输出头部标注**（`degraded: structural-only`，且头部 `hits: 0`）；
 5. **默认值不覆盖显式值**：显式写了非默认值时，归一后与默认值不等 → 正常报差异；
 6. 默认值表**必须带版本**（`k8s/v1.29`）；未知版本 → 退出码 `3`，**不得**回落到"最近的版本"。
 7. **默认值可以是条件性的**：`imagePullPolicy` 的默认值取决于同容器 `image` 的 tag（`latest` 或无 tag → `Always`；其余 → `IfNotPresent`，K8s 1.29 `SetDefaults_Container`）。规则用 `only_if_image_tag_not_latest` 表达该条件，`internal/profile` 在**无从判定时不补**——宁可不抵消，也不猜。把条件规则当无条件常量，会造成"左 `:latest` 无 policy / 右 `:latest` 显式 `IfNotPresent`"被静默判等（假阴性）。

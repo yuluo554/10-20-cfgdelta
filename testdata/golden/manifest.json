@@ -1,6 +1,6 @@
 {
   "generated_by": "tools/gen-golden-manifest.mjs",
-  "scope_note": "Covers the four red-teamed families (A/B/C/D), the 10 defaulting rules in data/profiles/k8s/v1.29.json, the §4.1/§4.2 grammar boundaries, and the M3 structural-comparison cases (four noise classes / sequence modes / RFC 6901 paths). NOT full Kubernetes semantics.",
+  "scope_note": "Covers the four red-teamed families (A/B/C/D), every one of the 10 defaulting rules in data/profiles/k8s/v1.29.json (each rule has a cancel case plus an explicit non-default control), the unmatched-profile degraded header, the §4.1/§4.2 grammar boundaries, and the M3 structural-comparison cases (four noise classes / sequence modes / RFC 6901 paths). NOT full Kubernetes semantics.",
   "cases": [
     {
       "case": "classify-exposure",
@@ -658,6 +658,365 @@
       "cosmetic": 0,
       "indeterminate": [],
       "note": "set membership ignores order: 0 entries"
+    },
+    {
+      "case": "testM4-degraded-header",
+      "args": [
+        "diff",
+        "--profile",
+        "k8s/v1.29",
+        "testM4/degraded-left.yaml",
+        "testM4/degraded-right.yaml"
+      ],
+      "exit": 1,
+      "behavioral": 1,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "contains": [
+        "degraded: structural-only",
+        "hits: 0"
+      ],
+      "note": "a ConfigMap matches no rule: header announces degraded: structural-only with hits: 0"
+    },
+    {
+      "case": "testM4-rule01-cancel",
+      "args": [
+        "diff",
+        "--profile",
+        "k8s/v1.29",
+        "testM4/rule01-left.yaml",
+        "testM4/rule01-default-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "rule 01 (imagePullPolicy (conditional on a non-latest image tag)): an omitted key cancels against an explicit default value"
+    },
+    {
+      "case": "testM4-rule01-nondefault",
+      "args": [
+        "diff",
+        "--profile",
+        "k8s/v1.29",
+        "testM4/rule01-left.yaml",
+        "testM4/rule01-nondefault-right.yaml"
+      ],
+      "exit": 1,
+      "behavioral": 1,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "contains": [
+        "/spec/template/spec/containers/0/imagePullPolicy",
+        "string:IfNotPresent -> string:Always"
+      ],
+      "note": "rule 01: an explicit non-default value is still reported (no over-silencing)"
+    },
+    {
+      "case": "testM4-rule02-cancel",
+      "args": [
+        "diff",
+        "--profile",
+        "k8s/v1.29",
+        "testM4/rule02-left.yaml",
+        "testM4/rule02-default-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "rule 02 (container port protocol under a Deployment template): an omitted key cancels against an explicit default value"
+    },
+    {
+      "case": "testM4-rule02-nondefault",
+      "args": [
+        "diff",
+        "--profile",
+        "k8s/v1.29",
+        "testM4/rule02-left.yaml",
+        "testM4/rule02-nondefault-right.yaml"
+      ],
+      "exit": 1,
+      "behavioral": 1,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "contains": [
+        "/spec/template/spec/containers/0/ports/0/protocol",
+        "string:TCP -> string:UDP"
+      ],
+      "note": "rule 02: an explicit non-default value is still reported (no over-silencing)"
+    },
+    {
+      "case": "testM4-rule03-cancel",
+      "args": [
+        "diff",
+        "--profile",
+        "k8s/v1.29",
+        "testM4/rule03-left.yaml",
+        "testM4/rule03-default-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "rule 03 (container port protocol on a bare Pod): an omitted key cancels against an explicit default value"
+    },
+    {
+      "case": "testM4-rule03-nondefault",
+      "args": [
+        "diff",
+        "--profile",
+        "k8s/v1.29",
+        "testM4/rule03-left.yaml",
+        "testM4/rule03-nondefault-right.yaml"
+      ],
+      "exit": 1,
+      "behavioral": 1,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "contains": [
+        "/spec/containers/0/ports/0/protocol",
+        "string:TCP -> string:UDP"
+      ],
+      "note": "rule 03: an explicit non-default value is still reported (no over-silencing)"
+    },
+    {
+      "case": "testM4-rule04-cancel",
+      "args": [
+        "diff",
+        "--profile",
+        "k8s/v1.29",
+        "testM4/rule04-left.yaml",
+        "testM4/rule04-default-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "rule 04 (terminationGracePeriodSeconds): an omitted key cancels against an explicit default value"
+    },
+    {
+      "case": "testM4-rule04-nondefault",
+      "args": [
+        "diff",
+        "--profile",
+        "k8s/v1.29",
+        "testM4/rule04-left.yaml",
+        "testM4/rule04-nondefault-right.yaml"
+      ],
+      "exit": 1,
+      "behavioral": 1,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "contains": [
+        "/spec/template/spec/terminationGracePeriodSeconds",
+        "decimal:30/1 -> decimal:60/1"
+      ],
+      "note": "rule 04: an explicit non-default value is still reported (no over-silencing)"
+    },
+    {
+      "case": "testM4-rule05-cancel",
+      "args": [
+        "diff",
+        "--profile",
+        "k8s/v1.29",
+        "testM4/rule05-left.yaml",
+        "testM4/rule05-default-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "rule 05 (restartPolicy): an omitted key cancels against an explicit default value"
+    },
+    {
+      "case": "testM4-rule05-nondefault",
+      "args": [
+        "diff",
+        "--profile",
+        "k8s/v1.29",
+        "testM4/rule05-left.yaml",
+        "testM4/rule05-nondefault-right.yaml"
+      ],
+      "exit": 1,
+      "behavioral": 1,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "contains": [
+        "/spec/template/spec/restartPolicy",
+        "string:Always -> string:Never"
+      ],
+      "note": "rule 05: an explicit non-default value is still reported (no over-silencing)"
+    },
+    {
+      "case": "testM4-rule06-cancel",
+      "args": [
+        "diff",
+        "--profile",
+        "k8s/v1.29",
+        "testM4/rule06-left.yaml",
+        "testM4/rule06-default-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "rule 06 (dnsPolicy): an omitted key cancels against an explicit default value"
+    },
+    {
+      "case": "testM4-rule06-nondefault",
+      "args": [
+        "diff",
+        "--profile",
+        "k8s/v1.29",
+        "testM4/rule06-left.yaml",
+        "testM4/rule06-nondefault-right.yaml"
+      ],
+      "exit": 1,
+      "behavioral": 1,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "contains": [
+        "/spec/template/spec/dnsPolicy",
+        "string:ClusterFirst -> string:Default"
+      ],
+      "note": "rule 06: an explicit non-default value is still reported (no over-silencing)"
+    },
+    {
+      "case": "testM4-rule07-cancel",
+      "args": [
+        "diff",
+        "--profile",
+        "k8s/v1.29",
+        "testM4/rule07-left.yaml",
+        "testM4/rule07-default-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "rule 07 (serviceAccountName): an omitted key cancels against an explicit default value"
+    },
+    {
+      "case": "testM4-rule07-nondefault",
+      "args": [
+        "diff",
+        "--profile",
+        "k8s/v1.29",
+        "testM4/rule07-left.yaml",
+        "testM4/rule07-nondefault-right.yaml"
+      ],
+      "exit": 1,
+      "behavioral": 1,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "contains": [
+        "/spec/template/spec/serviceAccountName",
+        "string:default -> string:build-bot"
+      ],
+      "note": "rule 07: an explicit non-default value is still reported (no over-silencing)"
+    },
+    {
+      "case": "testM4-rule08-cancel",
+      "args": [
+        "diff",
+        "--profile",
+        "k8s/v1.29",
+        "testM4/rule08-left.yaml",
+        "testM4/rule08-default-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "rule 08 (revisionHistoryLimit): an omitted key cancels against an explicit default value"
+    },
+    {
+      "case": "testM4-rule08-nondefault",
+      "args": [
+        "diff",
+        "--profile",
+        "k8s/v1.29",
+        "testM4/rule08-left.yaml",
+        "testM4/rule08-nondefault-right.yaml"
+      ],
+      "exit": 1,
+      "behavioral": 1,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "contains": [
+        "/spec/revisionHistoryLimit",
+        "decimal:10/1 -> decimal:3/1"
+      ],
+      "note": "rule 08: an explicit non-default value is still reported (no over-silencing)"
+    },
+    {
+      "case": "testM4-rule09-cancel",
+      "args": [
+        "diff",
+        "--profile",
+        "k8s/v1.29",
+        "testM4/rule09-left.yaml",
+        "testM4/rule09-default-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "rule 09 (strategy.type): an omitted key cancels against an explicit default value"
+    },
+    {
+      "case": "testM4-rule09-nondefault",
+      "args": [
+        "diff",
+        "--profile",
+        "k8s/v1.29",
+        "testM4/rule09-left.yaml",
+        "testM4/rule09-nondefault-right.yaml"
+      ],
+      "exit": 1,
+      "behavioral": 1,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "contains": [
+        "/spec/strategy/type",
+        "string:RollingUpdate -> string:Recreate"
+      ],
+      "note": "rule 09: an explicit non-default value is still reported (no over-silencing)"
+    },
+    {
+      "case": "testM4-rule10-cancel",
+      "args": [
+        "diff",
+        "--profile",
+        "k8s/v1.29",
+        "testM4/rule10-left.yaml",
+        "testM4/rule10-default-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "rule 10 (progressDeadlineSeconds): an omitted key cancels against an explicit default value"
+    },
+    {
+      "case": "testM4-rule10-nondefault",
+      "args": [
+        "diff",
+        "--profile",
+        "k8s/v1.29",
+        "testM4/rule10-left.yaml",
+        "testM4/rule10-nondefault-right.yaml"
+      ],
+      "exit": 1,
+      "behavioral": 1,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "contains": [
+        "/spec/progressDeadlineSeconds",
+        "decimal:600/1 -> decimal:120/1"
+      ],
+      "note": "rule 10: an explicit non-default value is still reported (no over-silencing)"
     }
   ]
 }

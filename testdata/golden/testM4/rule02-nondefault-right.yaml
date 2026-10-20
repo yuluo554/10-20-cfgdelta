@@ -1,0 +1,13 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: r02
+spec:
+  template:
+    spec:
+      containers:
+        - name: web
+          image: registry.example/synth/web:1.0.0
+          ports:
+            - containerPort: 80
+              protocol: UDP
