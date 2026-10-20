@@ -105,7 +105,7 @@ func TestDurationRejectsBareNumber(t *testing.T) {
 }
 
 // 浮点禁令的**行为级**哨兵：1e3 与 1000 必须走完全相同的规范值。
-// （静态扫描见 tests/float_ban_test.go。）
+// （静态扫描见 tests/invariants_test.go:TestNoFloatInComparisonPath。）
 func TestNoFloatInEquality(t *testing.T) {
 	a, err := ParseDecimal("1e3")
 	if err != nil {
@@ -197,5 +197,98 @@ func TestCanonicalStringIsFrozen(t *testing.T) {
 	d := Canonical{Family: FamilyDuration, Ns: 90_000_000_000}
 	if got := d.String(); got != "duration:90000000000" {
 		t.Fatalf("canonical string = %q, want duration:90000000000", got)
+	}
+}
+
+// §4.3 符号折叠：`+1` ≡ `1`、`-0` ≡ `0` —— 规范串必须逐字节相同，
+// 而不是"看起来相等"。符号若被当字符串残留，这里会立刻红。
+func TestDecimalSignFolding(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{"+1", "1/1"},
+		{"1", "1/1"},
+		{"-0", "0/1"},
+		{"0", "0/1"},
+		{"+0.5", "1/2"},
+		{"-1.50", "-3/2"},
+		{"+1e3", "1000/1"},
+	}
+	for _, c := range cases {
+		r, err := ParseDecimal(c.in)
+		if err != nil {
+			t.Fatalf("ParseDecimal(%q): %v", c.in, err)
+		}
+		if got := ratString(r); got != c.want {
+			t.Errorf("ParseDecimal(%q) = %s, want %s", c.in, got, c.want)
+		}
+	}
+	for _, pair := range [][2]string{{"+1", "1"}, {"-0", "0"}} {
+		a, err := ParseDecimal(pair[0])
+		if err != nil {
+			t.Fatalf("ParseDecimal(%q): %v", pair[0], err)
+		}
+		b, err := ParseDecimal(pair[1])
+		if err != nil {
+			t.Fatalf("ParseDecimal(%q): %v", pair[1], err)
+		}
+		ca := Canonical{Family: FamilyDecimal, Rat: a}.String()
+		cb := Canonical{Family: FamilyDecimal, Rat: b}.String()
+		if ca != cb {
+			t.Errorf("canonical strings differ: %q vs %q (%q ≡ %q)", ca, cb, pair[0], pair[1])
+		}
+	}
+	// 只有符号、没有数字 → 文法错误（不是 0）。
+	if _, err := ParseDecimal("+"); err == nil || !IsParseError(err) {
+		t.Fatalf(`ParseDecimal("+") err = %v, want parse error`, err)
+	}
+}
+
+// §4.1 / §4.2 的文法边界：这些形态在规范里明写，golden 之外单独钉死，
+// 防止"顺手放宽文法"把非法输入吞成合法值。
+func TestGrammarBoundaries(t *testing.T) {
+	// 指数与后缀不可同现（§4.1 边界）。
+	for _, in := range []string{"1e3Mi", "1E3Gi", "1e-3Ki"} {
+		_, err := ParseQuantity(in)
+		if err == nil {
+			t.Errorf("ParseQuantity(%q) must fail: exponent and suffix are mutually exclusive", in)
+			continue
+		}
+		if !IsParseError(err) {
+			t.Errorf("ParseQuantity(%q) err = %T, want *parseErr", in, err)
+		}
+	}
+	// 前导点 / 显式正号是合法书写（§4.1）。
+	for _, c := range []struct{ in, want string }{
+		{".5", "1/2"},
+		{"+.5", "1/2"},
+		{"+1", "1/1"},
+		{"+1Gi", "1073741824/1"},
+	} {
+		r, err := ParseQuantity(c.in)
+		if err != nil {
+			t.Fatalf("ParseQuantity(%q): %v", c.in, err)
+		}
+		if got := ratString(r); got != c.want {
+			t.Errorf("ParseQuantity(%q) = %s, want %s", c.in, got, c.want)
+		}
+	}
+	// µs（U+00B5）与 μs（U+03BC）两种拼写都接受，且与 us 等值（§4.2）。
+	for _, in := range []string{"1us", "1µs", "1μs"} {
+		ns, err := ParseDuration(in)
+		if err != nil {
+			t.Fatalf("ParseDuration(%q): %v", in, err)
+		}
+		if ns != 1000 {
+			t.Errorf("ParseDuration(%q) = %d, want 1000", in, ns)
+		}
+	}
+	// "0" 是 duration 唯一允许的无单位值；"0s" 折叠为同一规范值。
+	for _, in := range []string{"0", "0s"} {
+		ns, err := ParseDuration(in)
+		if err != nil {
+			t.Fatalf("ParseDuration(%q): %v", in, err)
+		}
+		if ns != 0 {
+			t.Errorf("ParseDuration(%q) = %d, want 0", in, ns)
+		}
 	}
 }

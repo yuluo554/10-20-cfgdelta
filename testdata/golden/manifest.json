@@ -1,6 +1,6 @@
 {
   "generated_by": "tools/gen-golden-manifest.mjs",
-  "scope_note": "Covers the four red-teamed families (A/B/C/D) plus the 10 defaulting rules in data/profiles/k8s/v1.29.json. NOT full Kubernetes semantics.",
+  "scope_note": "Covers the four red-teamed families (A/B/C/D), the 10 defaulting rules in data/profiles/k8s/v1.29.json, and the §4.1/§4.2 grammar boundaries. NOT full Kubernetes semantics.",
   "cases": [
     {
       "case": "classify-exposure",
@@ -55,6 +55,19 @@
       "cosmetic": 0,
       "indeterminate": [],
       "note": "gate without --fail-on is a usage error"
+    },
+    {
+      "case": "exit-invalid-yaml",
+      "args": [
+        "diff",
+        "testInvalid/bad-yaml.yaml",
+        "testA/k2.yaml"
+      ],
+      "exit": 3,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "YAML syntax error is parse_error 3, never downgraded to a string comparison"
     },
     {
       "case": "exit-missing-args",
@@ -162,6 +175,81 @@
       "cosmetic": 0,
       "indeterminate": [],
       "note": "gate does NOT block: unlisted behavioural differences are printed but do not fail the build"
+    },
+    {
+      "case": "grammar-duration-micro",
+      "args": [
+        "diff",
+        "--coerce-at",
+        "limits/*=duration",
+        "testGrammar/micro-left.yaml",
+        "testGrammar/micro-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 1,
+      "indeterminate": [],
+      "note": "1µs == 1us (both spellings are in the duration unit table)"
+    },
+    {
+      "case": "grammar-duration-zero",
+      "args": [
+        "diff",
+        "--coerce-at",
+        "limits/*=duration",
+        "testGrammar/zero-left.yaml",
+        "testGrammar/zero-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 1,
+      "indeterminate": [],
+      "note": "0 == 0s (bare zero is the only unit-less duration)"
+    },
+    {
+      "case": "grammar-e3mi-invalid",
+      "args": [
+        "diff",
+        "--coerce-at",
+        "limits/*=quantity",
+        "testGrammar/e3mi-left.yaml",
+        "testGrammar/e3mi-right.yaml"
+      ],
+      "exit": 3,
+      "behavioral": 0,
+      "cosmetic": 0,
+      "indeterminate": [],
+      "note": "1e3Mi is illegal (exponent and suffix are mutually exclusive) -> parse error 3"
+    },
+    {
+      "case": "grammar-leading-dot",
+      "args": [
+        "diff",
+        "--coerce-at",
+        "limits/*=quantity",
+        "testGrammar/frac-left.yaml",
+        "testGrammar/frac-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 1,
+      "indeterminate": [],
+      "note": ".5 == 0.5 (leading dot is part of the quantity grammar)"
+    },
+    {
+      "case": "grammar-plus-sign",
+      "args": [
+        "diff",
+        "--coerce-at",
+        "limits/*=quantity",
+        "testGrammar/plus-left.yaml",
+        "testGrammar/plus-right.yaml"
+      ],
+      "exit": 0,
+      "behavioral": 0,
+      "cosmetic": 1,
+      "indeterminate": [],
+      "note": "+1 == 1 (sign folds into the rational value)"
     },
     {
       "case": "testA-ctrl-profile",

@@ -23,9 +23,29 @@ func LookupYAML11Bool(s string) (bool, bool) {
 }
 
 // ParseDecimal 把十进制字面量解析为精确有理数（§4.3）。
-// 支持整数、小数、指数式（1e3）；1.50 与 1.5 自然约分为同一 Rat。
+// 支持符号（`+1` ≡ `1`、`-0` ≡ `0`）、整数、小数、指数式（1e3）；
+// 1.50 与 1.5 自然约分为同一 Rat。
 func ParseDecimal(s string) (*big.Rat, error) {
-	return parseDecimalRat(strings.TrimSpace(s))
+	raw := strings.TrimSpace(s)
+	neg := false
+	switch {
+	case strings.HasPrefix(raw, "+"):
+		raw = raw[1:]
+	case strings.HasPrefix(raw, "-"):
+		neg = true
+		raw = raw[1:]
+	}
+	if raw == "" {
+		return nil, errParse("decimal has sign but no number: " + s)
+	}
+	r, err := parseDecimalRat(raw)
+	if err != nil {
+		return nil, err
+	}
+	if neg {
+		r.Neg(r)
+	}
+	return r, nil
 }
 
 // ParseRatio 把 "50%" 解析为 1/2（§4.6，仅在显式声明 ratio 族时调用）。

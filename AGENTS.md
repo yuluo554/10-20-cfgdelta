@@ -27,14 +27,14 @@ node tools/check-sprint-layout.mjs    # 布局门；必须绿，红了先修布�
 ## 口径红线（动了会打挂测试，改前先读 `plan/05` 的 K 编号清单）
 
 - **数值口径唯一来源 = `data/README.md §四`**。代码里的常量/函数只实现一次，plan 与 README 均为引用，**不得手写第二份口径**。
-- **禁止浮点参与相等判定**：比较路径只允许 `*big.Rat` / `int64` 纳秒 / 枚举。`tests/float_ban_test.go` 是静态拦截门。
+- **禁止浮点参与相等判定**：比较路径只允许 `*big.Rat` / `int64` 纳秒 / 枚举。`tests/invariants_test.go:TestNoFloatInComparisonPath` 是静态拦截门。
 - **退出码 0/1/2/3 一处定义**（`internal/exitcode`），优先级 `3 > 2 > 1 > 0`。
 - **默认值表外置为版本化 JSON**（`data/profiles/k8s/v1.29.json`，随二进制内嵌）；未命中即降级并在输出头标注，**不静默假装已比较**。
 - **`indeterminate` 是一等结果**，必须带理由码；默认只对已知族归一，`--strict` 才升级未知族。
 
 ## 环境事实与禁忌（带实测日期）
 
-- 2026-10-20 实测：本机 **无 `go` 命令**，Go 1.24.5 解压在 `.tmp/sdk/go`（不入库）；`GOFLAGS=-mod=mod GOPROXY=https://goproxy.cn,direct` 可拉取 `gopkg.in/yaml.v3`。
+- 2026-10-20 实测：本机 **无 `go` 命令**，Go 1.24.5 解压在仓库外 `C:\Users\<user>\go-sdk\go`（`.tmp/sdk/go` 在本机不存在；`/.tmp/` 已被 `.gitignore` 排除）；`GOFLAGS=-mod=mod GOPROXY=https://goproxy.cn,direct` 可拉取 `gopkg.in/yaml.v3`。
 - 2026-10-20 实测：`node v24.15.0` 可用；`py -0p` 有 3.8 与 3.12；`rustc 1.95.0` 可用（未选）。
 - 2026-10-20 实测：`crates.io` 直连 403、`api.github.com` 200；`github.com` git 通道不稳时先试本地代理 `127.0.0.1:7897`。
 - **禁止**：把"未执行"写成已完成；在 tag 之后改代码面；把会话里的绝对路径写进库内文档。

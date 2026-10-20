@@ -135,6 +135,58 @@ addCase(
   "MB vs MiB is indeterminate, never silently equal",
 );
 
+// ── 文法边界（§4.1 / §4.2 明写的形态；真值同样由文法推导）──────────────────
+// 指数与后缀不可同现：`1e3Mi` 必须 exit 3（parse_error），不许降级成字符串比较。
+addCase(
+  "grammar-e3mi-invalid",
+  ["diff", "--coerce-at", "limits/*=quantity", "testGrammar/e3mi-left.yaml", "testGrammar/e3mi-right.yaml"],
+  3,
+  0,
+  0,
+  [],
+  "1e3Mi is illegal (exponent and suffix are mutually exclusive) -> parse error 3",
+);
+// 前导点：`.5` ≡ `0.5`（§4.1 number 允许 ". digits"）。
+addCase(
+  "grammar-leading-dot",
+  ["diff", "--coerce-at", "limits/*=quantity", "testGrammar/frac-left.yaml", "testGrammar/frac-right.yaml"],
+  0,
+  0,
+  1,
+  [],
+  ".5 == 0.5 (leading dot is part of the quantity grammar)",
+);
+// 显式正号：`+1` ≡ `1`（§4.3 保留符号位，+1 与 1 折叠）。
+addCase(
+  "grammar-plus-sign",
+  ["diff", "--coerce-at", "limits/*=quantity", "testGrammar/plus-left.yaml", "testGrammar/plus-right.yaml"],
+  0,
+  0,
+  1,
+  [],
+  "+1 == 1 (sign folds into the rational value)",
+);
+// 微秒两种拼写：`µs`（U+00B5）与 `us` 等值（§4.2 unit 表）。
+addCase(
+  "grammar-duration-micro",
+  ["diff", "--coerce-at", "limits/*=duration", "testGrammar/micro-left.yaml", "testGrammar/micro-right.yaml"],
+  0,
+  0,
+  1,
+  [],
+  "1µs == 1us (both spellings are in the duration unit table)",
+);
+// duration 唯一允许的无单位值：`0` ≡ `0s`（§4.2 特例）。
+addCase(
+  "grammar-duration-zero",
+  ["diff", "--coerce-at", "limits/*=duration", "testGrammar/zero-left.yaml", "testGrammar/zero-right.yaml"],
+  0,
+  0,
+  1,
+  [],
+  "0 == 0s (bare zero is the only unit-less duration)",
+);
+
 // ── 分类与门禁（五类各一例 + 选择性阻断）────────────────────────────────────
 addCase(
   "classify-resource-shrink",
@@ -181,6 +233,7 @@ addCase("testD-hcl", ["diff", "testD/a.hcl", "testD/b.hcl"], 0, 0, 0, [], "pendi
 addCase("exit-unknown-subcommand", ["nosuchcommand"], 3, 0, 0, [], "usage error is 3, never 2");
 addCase("exit-missing-args", ["diff", "testA/k1.yaml"], 3, 0, 0, [], "missing positional is a usage error (3)");
 addCase("exit-missing-file", ["diff", "testA/does-not-exist.yaml", "testA/k2.yaml"], 3, 0, 0, [], "missing input file is 3");
+addCase("exit-invalid-yaml", ["diff", "testInvalid/bad-yaml.yaml", "testA/k2.yaml"], 3, 0, 0, [], "YAML syntax error is parse_error 3, never downgraded to a string comparison");
 addCase("exit-unknown-profile", ["diff", "--profile", "k8s/v9.99", "testA/k1.yaml", "testA/k2.yaml"], 3, 0, 0, [], "unknown profile version is 3, no fallback");
 addCase("exit-unknown-class", ["gate", "--fail-on", "not-a-class", "testA/k1.yaml", "testA/k2.yaml"], 3, 0, 0, [], "unknown impact class is 3");
 addCase("exit-coerce-miss", ["diff", "--coerce-at", "nope/*=quantity", "testA/k1.yaml", "testA/k2.yaml"], 3, 0, 0, [], "unmatched --coerce-at glob is a usage error, never silent");
@@ -230,7 +283,7 @@ if (orphans.length > 0) {
 const manifest = {
   generated_by: "tools/gen-golden-manifest.mjs",
   scope_note:
-    "Covers the four red-teamed families (A/B/C/D) plus the 10 defaulting rules in data/profiles/k8s/v1.29.json. NOT full Kubernetes semantics.",
+    "Covers the four red-teamed families (A/B/C/D), the 10 defaulting rules in data/profiles/k8s/v1.29.json, and the §4.1/§4.2 grammar boundaries. NOT full Kubernetes semantics.",
   cases: cases.sort((a, b) => (a.case < b.case ? -1 : a.case > b.case ? 1 : 0)),
 };
 

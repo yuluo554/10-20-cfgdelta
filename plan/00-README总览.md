@@ -23,7 +23,7 @@
 | `plan/04-数据计划.md` | 数据清单 / profile 形状 / golden 分层 / 真值纪律 / 生成器与守门 | ✅ v1（M0 落盘） |
 | `plan/05-里程碑与验收.md` | M0–M6 DoD / **K 编号清单** / 已知未验证项 / 排期 | ✅ v1（M0 落盘） |
 | `plan/06-交付对标.md` | 提交材料落点 / 评分对标 / 风险登记 / 缺口表 | ✅ v1（M0 落盘） |
-| `plan/HANDOFF-M<next>.md` | 每里程碑续接快照（七节） | ✅ `HANDOFF-M1.md` 已落盘 |
+| `plan/HANDOFF-M<next>.md` | 每里程碑续接快照（七节） | ✅ `HANDOFF-M1` / `HANDOFF-M2` 已落盘；下一棒 `HANDOFF-M3.md` |
 | `data/README.md` | 依据查证（三态 + issue/HN 编号 + 基准日）/ 可复现实测命令 / 数据源记录 / 合成数据纪律 / 数值口径纪律 | ✅ v1（出题阶段 4，2026-10-20） |
 | `tools/check-sprint-layout.mjs` | 布局门（方法论装订第②件） | ✅ v1（9 组变异验证） |
 | `.gitignore` | Go 编译产物 / 二进制 / 覆盖率 | ✅ v1 |
@@ -64,13 +64,13 @@
 
 | 承诺项 | 素材来源 | 交付物内可达性 | 核验方式 | 状态 |
 |---|---|---|---|---|
-| Quantity 精确有理数归一 | apimachinery 文法（公开）+ 测试C 实测误报 | M1 引擎内嵌 | 测试C 七组全等 + `1Gi` vs `1000M` 判不等 | ⬜ 待 M1 实现 |
-| Duration 纳秒归一 | Go `time.ParseDuration` 文法（公开）+ 测试C | M1 引擎内嵌 | `90s`==`1m30s`、`1h`==`60m` 断言 | ⬜ 待 M1 实现 |
-| 十进制精确归一 + 整值浮点折叠 | 测试C 第 6/7 组实测 | M1 引擎内嵌 | `1e3`==`1000`、`1.50`==`1.5` 断言 | ⬜ 待 M1 实现 |
-| YAML 1.1 布尔全族 | YAML 1.1 规范（公开） | M1 引擎内嵌 | 全族归一断言 + `"true"` 不强转断言 | ⬜ 待 M1 实现 |
-| null 三态不折叠 | 口径定义（data/README §四） | M1 引擎内嵌 | 三态各自可见断言 | ⬜ 待 M1 实现 |
-| `indeterminate` 带理由码 | MB/MiB 歧义实测 | M1 引擎内嵌 + 退出码 2 | `MB` vs `MiB` → 理由码断言 | ⬜ 待 M1 实现 |
-| 浮点禁令 | 决策（禁止浮点相等） | 代码评审 + 测试 | 静态扫描 + 断言 | ⬜ 待 M1 实现 |
+| Quantity 精确有理数归一 | apimachinery 文法（公开）+ 测试C 实测误报 | M1 引擎内嵌 | 测试C 七组全等 + `1Gi` vs `1000M` 判不等 | ✅ M2（golden c01–c03 判等、c08 反例 rc=1；`TestQuantityGrammar`） |
+| Duration 纳秒归一 | Go `time.ParseDuration` 文法（公开）+ 测试C | M1 引擎内嵌 | `90s`==`1m30s`、`1h`==`60m` 断言 | ✅ M2（golden c04/c05；`TestDurationGrammar` + `TestGrammarBoundaries`） |
+| 十进制精确归一 + 整值浮点折叠 | 测试C 第 6/7 组实测 | M1 引擎内嵌 | `1e3`==`1000`、`1.50`==`1.5` 断言 | ✅ M2（golden c06/c07；`+1≡1`/`-0≡0` 由 `TestDecimalSignFolding` 钉死） |
+| YAML 1.1 布尔全族 | YAML 1.1 规范（公开） | M1 引擎内嵌 | 全族归一断言 + `"true"` 不强转断言 | ✅ M2（`TestYAML11BoolFamily`） |
+| null 三态不折叠 | 口径定义（data/README §四） | M1 引擎内嵌 | 三态各自可见断言 | ✅ M2（`TestNullThreeStates`） |
+| `indeterminate` 带理由码 | MB/MiB 歧义实测 | M1 引擎内嵌 + 退出码 2 | `MB` vs `MiB` → 理由码断言 | ✅ M2（golden c09 exit 2 + `indeterminate(ambiguous_unit_family)`） |
+| 浮点禁令 | 决策（禁止浮点相等） | 代码评审 + 测试 | 静态扫描 + 断言 | ✅ M2（`tests/invariants_test.go:TestNoFloatInComparisonPath`，扫 20 个非测试文件 0 命中） |
 | 键序无关比较 | 测试A/B 实测（env 顺序） | M2 引擎内嵌 | 键重排零差异断言 | ⬜ 待 M2 实现 |
 | 序列三模式 | 决策（不做自动猜测） | M2 引擎内嵌 | `set` 乱序零差异；`keyed:` 重复键报错 | ⬜ 待 M2 实现 |
 | 注释/缩进/引号零噪声 | 覆盖矩阵（dyff 此列已 ✅） | M2 解析阶段 | 四类输入零差异条目断言 | ⬜ 待 M2 实现 |
@@ -83,7 +83,7 @@
 | `gate --fail-on` 选择性阻断 | 决策（门禁语义） | CLI `gate` 子命令 | 未列出的行为差异不阻断断言 | ⬜ 待 M4 实现 |
 | TOML/INI/.env/HCL 适配 | 测试D 实测 | M5 适配器 | 测试D TOML 零噪声 + HCL 重排零差异 | ⬜ 待 M5 实现 |
 | HCL 不求值 | 决策（只做结构解析） | M5 `unevaluated` 标注 | 表达式节点标注断言 | ⬜ 待 M5 实现 |
-| golden 四组夹具 | 测试A/B/C/D 实测 | `testdata/golden/` | `selftest` 一条命令全跑 | ✅ 已落盘（29 例，27 pass / 2 显式 skip） |
+| golden 四组夹具 | 测试A/B/C/D 实测 | `testdata/golden/` | `selftest` 一条命令全跑 | ✅ 已落盘（35 例，33 pass / 2 显式 skip） |
 | 三家基线留档 | dyff v1.12.0 / diffyml v1.8.2 / confdiff 0.17.2 实测 | `testdata/baseline/` | 留档含版本 + 命令 + 输出 | ✅ 已落盘（40 个 `.out` + 四件齐全守门） |
 | 单静态二进制 | 形态决策 | Release 附件 | 干净机器直接运行；`file` / 依赖检查 | ⬜ 待 M6 验证 |
 | README 首屏 4→0 对照 | 测试A golden | `docs/testA-before-after.png` | 文件存在 + 内容与 golden 一致 | ⬜ 待 M3 后补 |
@@ -98,7 +98,7 @@
 |---|---|---|---|
 | **M0 装订与骨架** | 第零步装订（AGENTS.md + 布局门 + plan/00 装订行）+ plan/00–06 + Go 骨架（5 子命令）+ CI | 布局门 9 组变异全红；`go vet` / `go test` / `selftest` 全绿；单静态二进制可跑；CI workflow 本地解析通过 | ✅ 完成（2026-10-20，本地等价校验，未接远端） |
 | **M1 数据先行** | golden 四组夹具（测试A/B/C/D）+ 三家基线留档 + 10 条默认值表 + `plan/02`/`03`/`04` 落盘 | 夹具最小可复现；基线留档含版本号与调用命令；默认值表为版本化 JSON 且每条带来源标注；`plan/03` 模块数与 plan/01 一致 | ✅ 完成（2026-10-20：三家 40 个 `.out` 留档 + 守门 7 组变异全红；10 条规则逐条核对到上游源码，抓出并修掉 1 条条件性默认值） |
-| **M2 归一化** | M1 模块（normalize 引擎）：Quantity / Duration / 十进制 / 布尔族 / null 三态 / `indeterminate` | 测试C 七组 100% 判等；`1Gi` vs `1000M` 判不等；`MB` vs `MiB` 判 indeterminate 且带理由码；浮点禁令有静态拦截；双跑字节一致 | ⬜ 待开工 |
+| **M2 归一化** | M1 模块（normalize 引擎）：Quantity / Duration / 十进制 / 布尔族 / null 三态 / `indeterminate` | 测试C 七组 100% 判等；`1Gi` vs `1000M` 判不等；`MB` vs `MiB` 判 indeterminate 且带理由码；浮点禁令有静态拦截；双跑字节一致 | ✅ 完成（2026-10-20：golden 35 例 33 pass / 2 显式 skip；测试C 七组全等、c08 反例 rc=1、c09 exit 2；浮点门 0 命中；双跑 `cmp` 逐字节一致；修掉 `ParseDecimal` 不接受符号导致 `+1`/`-0` 报错的缺陷，新增 5 条文法边界 + 1 条非法 YAML golden） |
 | **M3 结构比较** | M2 模块（diff 引擎）：键序无关 / 序列三模式 / 注释零噪声 | 四类结构差异零条目；`keyed:` 重复键报错；`set` 乱序零差异；双跑字节一致 | ⬜ 待开工 |
 | **M4 默认值** | M3 模块（profile）：双侧施加 + 抵消 + 未命中降级 | **测试A 4 条 → 0 条**；显式非默认对照组仍报 1 条；未知 profile 版本明确报错；`--dump-normalized` 可见双侧默认值 | ⬜ 待开工 |
 | **M5 分类门禁** | M4 模块 + M5 模块（多格式适配器）；README 首屏截图 | **测试B 5 条 exit 1 → 0 行为差异 exit 0**；五类各一例；退出码 0/1/2/3 逐位断言；测试D TOML 零噪声；`docs/testA-before-after.png` 落盘 | ⬜ 待开工 |
