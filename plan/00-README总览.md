@@ -85,9 +85,9 @@
 | HCL 不求值 | 决策（只做结构解析） | M5 `unevaluated` 标注 | 表达式节点标注断言 | ✅ M5（`testD-hcl-unevaluated`：exit 2，输出含 `indeterminate(unevaluated_expression)` 与左右原文；`TestHCLExpressionIsUnevaluated` / `TestUnevaluatedExpressions`） |
 | golden 四组夹具 | 测试A/B/C/D 实测 | `testdata/golden/` | `selftest` 一条命令全跑 | ✅ 已落盘（76 例，76 pass / 0 显式 skip） |
 | 三家基线留档 | dyff v1.12.0 / diffyml v1.8.2 / confdiff 0.17.2 实测 | `testdata/baseline/` | 留档含版本 + 命令 + 输出 | ✅ 已落盘（40 个 `.out` + 四件齐全守门） |
-| 单静态二进制 | 形态决策 | Release 附件 | 干净机器直接运行；`file` / 依赖检查 | ⬜ 待 M6 验证 |
+| 单静态二进制 | 形态决策 | Release 附件 | 干净机器直接运行；`file` / 依赖检查 | ✅ M6（`file dist-release/cfgdelta-linux-amd64` → `ELF 64-bit LSB executable, x86-64, statically linked, stripped`；二进制内无 `ld-linux` 动态加载器字符串；windows/amd64 产物在本机裸跑 `--version` + `selftest` 76 passed） |
 | README 首屏 4→0 对照 | 测试A golden | `docs/testA-before-after.png` | 文件存在 + 内容与 golden 一致 | ✅ M5（1280×760 PNG；左 `total 4 · behavioral 2 · cosmetic 2` exit 1，右 `total 2 · behavioral 0 · cosmetic 2` exit 0；README 首屏引用） |
-| 发布可用性 | GitHub Releases | 源码 + 二进制 + SHA256SUMS | 干净环境 clone 跑通 README；真下载 sha256 复验 | ⬜ 待 M6 |
+| 发布可用性 | GitHub Releases | 源码 + 二进制 + SHA256SUMS | 干净环境 clone 跑通 README；真下载 sha256 复验 | ✅ M6（tag `v0.1.0`；Release 四件已发布；`gh release download` 后 `sha256sum -c SHA256SUMS` 三行全 OK 并真跑 `--version` + `selftest`；干净 clone 按 README 跑通——证据见 `plan/RELEASE-M6.md §1.6 / §2.2 / §2.4`） |
 | 完整 defaulting 表（扩展项） | — | 不承诺首期 | 非首期 DoD | 扩展项 |
 | helm values 覆盖链（扩展项） | 需求真实（HN 40861457），形态冲突 | 不承诺首期 | 非首期 DoD | 扩展项 |
 | 多来源 env parity（扩展项） | 需求证据不足（检索全 0、无原话） | 不承诺首期 | 非首期 DoD | 扩展项 |
