@@ -25,11 +25,15 @@ vet:
 gate:
 	node tools/check-sprint-layout.mjs
 
+# Desensitization gate: no host paths / usernames / local proxies in the tree.
+privacy:
+	node tools/check-desensitized.mjs
+
 selftest: build
 	./$(BIN) selftest
 
 # Everything a machine can check locally without network access.
-check: gate vet test
+check: gate privacy vet test
 	node tools/sync-version.mjs --check
 	node tools/sync-profiles.mjs --check
 	node tools/gen-golden-manifest.mjs --check
