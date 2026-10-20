@@ -261,6 +261,34 @@ open RELEASE_NOTES.md: no such file or directory
 显示红色，而 Release 本身已正确发布且附件可复验。修正只影响"下一次 tag 能否全自动发布"，
 不影响任何产物字节。
 
+**修正逻辑的实证（不新打 tag 的前提下）**：把修正后的 `Checksums + manifest` 步骤原样
+放到本地临时目录执行（`GITHUB_WORKSPACE` 指向该目录）：
+
+```
+NOTES_OK: <tmp>/RELEASE_NOTES.md      # 落在 dist/ 之外（旧逻辑会落在 dist/ 内）
+$ ls dist/RELEASE_NOTES.md
+ls: cannot access 'dist/RELEASE_NOTES.md': No such file or directory
+```
+
+再对**真实 Release** 走一遍修正后的分支判定（`gh release view` 命中 → `upload --clobber`）：
+
+```
+BRANCH=existing-release -> upload --clobber
+cfgdelta-darwin-arm64  2981586  sha256:cf5173…
+cfgdelta-linux-amd64  3023032  sha256:fec440…
+cfgdelta-windows-amd64.exe  3172352  sha256:0b3fe1…
+SHA256SUMS  268  sha256:da5487…
+```
+
+**这一步的副作用已发现并已复原（如实记录）**：上面这次 `--clobber` 把我本机重新生成的
+`SHA256SUMS` 覆盖到了 Release 上——本机 coreutils 生成的行是 `<hash> *<name>`（二进制标记
+`*`），而 CI 生成的是 `<hash>  <name>`，字节不同、`SHA256SUMS` 自身的 sha256 因此变成
+`0aafc2eb…`。随即用 `dist-release/SHA256SUMS`（即 CI 原样字节）`--clobber` 覆盖回去，
+复核为 `da5487f4…`，并重新走了一遍真下载 `sha256sum -c` 与原生 `selftest`（见 §2.4 末行）。
+
+**结论**：幂等分支本身可用（这是修正要证明的），但"本机产物覆盖 CI 产物"必须避免——
+今后手工补传一律用 CI 下载回来的字节，不用本机重算的校验和文件。
+
 ### 2.4 本地留副本与真下载复核
 
 **本地留副本**（`dist-release/`，已 gitignore，不入库）：
@@ -289,6 +317,12 @@ selftest: 76 passed, 0 failed, 0 skipped
 ```
 
 即"下载 → 校验 → 真跑"三段都在本机实测过，且用的是 Release 上的附件而不是本地构建。
+
+**复验时间线**：首次发布后复验通过（附件 digest 与 tag run 日志逐字相同）；随后在
+"修正逻辑实证"（§2.3 末段）中 `SHA256SUMS` 被本机字节覆盖，已用 CI 原样字节复原；
+复原后**再次** `gh release download` 到全新空目录并重跑 `sha256sum -c SHA256SUMS`
+（三行全 OK）与 `./cfgdelta-windows-amd64.exe selftest`（76 passed），末态可复验。
+`gh release view --json assets` 的四个 digest 与 §2.2 表格逐字一致。
 
 ### 2.5 状态翻转（三处一致）
 
