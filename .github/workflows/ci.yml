@@ -95,9 +95,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ./dist/cfgdelta classify testdata/golden/testA/k1.yaml testdata/golden/testA/k2.yaml > run1.txt
-          ./dist/cfgdelta classify testdata/golden/testA/k1.yaml testdata/golden/testA/k2.yaml > run2.txt
+          # `classify` exits 1 when it finds a behavioural difference — that IS the
+          # expected result for testA without a profile. Under `set -e` the first
+          # run would abort the step before cmp ever executed (caught on the first
+          # real CI run). Only cmp and the exit-code equality decide this step.
+          set +e
+          ./dist/cfgdelta classify testdata/golden/testA/k1.yaml testdata/golden/testA/k2.yaml > run1.txt 2>&1
+          rc1=$?
+          ./dist/cfgdelta classify testdata/golden/testA/k1.yaml testdata/golden/testA/k2.yaml > run2.txt 2>&1
+          rc2=$?
+          set -e
+          test "$rc1" = "$rc2"
           cmp run1.txt run2.txt
+          echo "deterministic: identical bytes and exit code $rc1"
 
   # ── 发布产物：三平台**原生**构建（不是交叉编译）+ 原生冒烟 ────────────────
   # 只在 v* tag 上跑：VERSION 必须与 tag 一致（K-03 版本单一来源），
