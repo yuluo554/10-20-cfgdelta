@@ -40,12 +40,36 @@ function git(args, cwd = ROOT) {
   return r.stdout;
 }
 
+/**
+ * 导出树的两种来源：
+ *   A. 在 git 工作区里跑（日常 / CI）：`git archive HEAD` 出一棵不带 .git 的树。
+ *   B. 在**没有 .git** 的源码包 / `git archive` 导出树里跑（发布物自验）：直接复制当前树。
+ * 两种都要能跑——否则"发布物自带的门自己跑不了"，这正是本仓 D1 想防的那类问题。
+ */
+const inGitWorkTree = spawnSync("git", ["rev-parse", "--is-inside-work-tree"], {
+  cwd: ROOT,
+  encoding: "utf8",
+}).stdout?.trim() === "true";
+
+const SKIP_COPY = new Set([".git", "node_modules"]);
+
+function copyTree(from, to) {
+  mkdirSync(to, { recursive: true });
+  for (const entry of readdirSync(from, { withFileTypes: true })) {
+    if (SKIP_COPY.has(entry.name)) continue;
+    const src = join(from, entry.name);
+    const dst = join(to, entry.name);
+    if (entry.isDirectory()) copyTree(src, dst);
+    else if (entry.isFile()) copyFileSync(src, dst);
+  }
+}
+
 // ── 1. 导出干净树 ────────────────────────────────────────────────────────────
 const tmpRoot = mkdtempSync(join(tmpdir(), "cfgdelta-layout-mut-"));
 const tree = join(tmpRoot, "tree");
 mkdirSync(tree, { recursive: true });
 
-{
+if (inGitWorkTree) {
   const archive = git(["archive", "HEAD"]);
   // 用 cwd 而不是 `tar -C <path>`：Windows 上 git-bash 的 tar 会把盘符路径误当远程主机名。
   const r = spawnSync("tar", ["-x"], { input: archive, cwd: tree });
@@ -53,12 +77,14 @@ mkdirSync(tree, { recursive: true });
     process.stderr.write(`tar 解包失败: ${r.stderr?.toString("utf8") ?? ""}\n`);
     process.exit(1);
   }
+} else {
+  copyTree(ROOT, tree);
 }
 
 // 工作树的未提交改动（含**未跟踪**的新增文件）覆盖上去 —— 改门的同时可自验。
 // 未跟踪文件必须一起带，否则"文档点名了新脚本、树里没有"会让 LAYOUT.DOC_TOOLS 假红。
 const overlaid = [];
-{
+if (inGitWorkTree) {
   const tracked = git(["diff", "--name-only", "--diff-filter=AMD", "HEAD"]).toString("utf8").split("\n");
   const untracked = git(["ls-files", "--others", "--exclude-standard"]).toString("utf8").split("\n");
   for (const rel of [...tracked, ...untracked].filter(Boolean)) {
@@ -71,10 +97,14 @@ const overlaid = [];
   }
 }
 
-const head = git(["rev-parse", "--short", "HEAD"]).toString("utf8").trim();
-const dirty = git(["status", "--porcelain"]).toString("utf8").trim();
+const head = inGitWorkTree ? git(["rev-parse", "--short", "HEAD"]).toString("utf8").trim() : "(no .git)";
+const dirty = inGitWorkTree ? git(["status", "--porcelain"]).toString("utf8").trim() : "";
 say(`变异验证 · 布局门（${GATE}）`);
-say(`导出树：HEAD ${head}${dirty ? `（工作树有未提交改动，已覆盖 ${overlaid.length} 个文件）` : "（干净）"}`);
+say(
+  inGitWorkTree
+    ? `导出树：HEAD ${head}${dirty ? `（工作树有未提交改动，已覆盖 ${overlaid.length} 个文件）` : "（干净）"}`
+    : "导出树：当前目录整树复制（这里没有 .git，按源码包形态自验）",
+);
 if (overlaid.length) for (const rel of overlaid) say(`  overlay ${rel}`);
 say("=".repeat(72));
 
