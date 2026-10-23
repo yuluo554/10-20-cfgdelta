@@ -6,7 +6,7 @@
 
 It normalizes first (quantities, durations, numerics, YAML booleans), compares structure-independently (key order / indentation / quotes / comments are zero-noise), cancels Kubernetes API-server defaulting on **both** sides, and classifies what remains into five behavioural impact classes plus one cosmetic class that is only counted.
 
-> Status: **v0.1.0** (2026-10-20). The CLI, exit-code contract, parsers (YAML/JSON/TOML/INI/.env/HCL), normalization algebra, structural diff, defaulting profile (both-sides application, cancellation, degraded header), impact classification (six classes, semver sub-classes, gate semantics) and golden harness are in place and pass their tests. See `plan/05-里程碑与验收.md` for the milestone table.
+> Status: **v0.1.1** (2026-10-23). The CLI, exit-code contract, parsers (YAML/JSON/TOML/INI/.env/HCL), normalization algebra, structural diff, defaulting profile (both-sides application, cancellation, degraded header), impact classification (six classes, semver sub-classes, gate semantics) and golden harness are in place and pass their tests. v0.1.1 fixes the layout gate itself (false-negative gap criterion, empty-table vacuity, SKIP-vs-PASS states), adds the mutation harness that proves each of its 8 criteria can go red, and corrects the release notes' `selftest` wording — no comparison behaviour changed. See `plan/05-里程碑与验收.md` for the milestone table.
 
 ## Milestone status
 
@@ -19,6 +19,7 @@ It normalizes first (quantities, durations, numerics, YAML booleans), compares s
 | M4 | ✅ 完成（2026-10-20） | 默认值双侧施加 + 抵消 + 未命中降级：测试A 4 → 0（`testA-profile` exit 0，cosmetic 2）；显式非默认仍报（`testA-ctrl-profile` exit 1）；10 条规则逐条 golden；`testM4` 21 例；golden 66 例（64 pass / 2 显式 skip） |
 | M5 | ✅ 完成（2026-10-20） | 分类门禁 + 多格式：六类各一例端到端、semver 四例；TOML/INI/.env/HCL 按扩展名分派；HCL 表达式 `unevaluated_expression`；测试B 在 `keyed:name` 下 0 行为差异；golden 76 例（76 pass / 0 skip）；首屏对照截图落盘 |
 | M6 | ✅ 完成（2026-10-20） | 发布三件套：tag `v0.1.0` + GitHub Release（三平台二进制 + `SHA256SUMS`）+ `plan/RELEASE-M6.md` |
+| M7 | ✅ 完成（2026-10-23） | 缺陷修复与再发布：布局门补实物变异脚本（8/8 组）、修 GAPS 列方向、引入 PASS/SKIP/FAIL 三态、`selftest` 表述与事实对齐（golden 未嵌入二进制）；产品行为面零改动。tag `v0.1.1` + Release + `plan/RELEASE-M7.md` |
 
 This status line describes **version + capability only**. Whether the repository is actually published, and whether CI is green, live on the Releases page and in `plan/` — a README in a tarball should not be the first-hand source for release state.
 
@@ -113,16 +114,20 @@ Privacy: **purely local, zero network.** No telemetry, no account, no environmen
 ## Develop
 
 ```bash
-node tools/check-sprint-layout.mjs     # methodology layout gate (must be green)
-node tools/sync-version.mjs --check    # VERSION vs embedded mirror
-node tools/sync-profiles.mjs --check   # data/profiles vs embedded mirror
+node tools/check-sprint-layout.mjs       # methodology layout gate (must be green)
+node tools/verify-layout-mutations.mjs   # ...and prove it can go red: 8/8 mutations
+node tools/check-desensitized.mjs        # no host paths / usernames / local proxies
+node tools/sync-version.mjs --check      # VERSION vs embedded mirror
+node tools/sync-profiles.mjs --check     # data/profiles vs embedded mirror
 node tools/gen-golden-manifest.mjs --check
 go vet ./...
 go test ./...
 ./cfgdelta selftest
 ```
 
-The golden suite (`testdata/golden/`) ships with the repo and runs offline via `cfgdelta selftest`.
+The layout gate has **8 criteria** (FILES / BINDING_HEAD / SECTIONS / DOC_TOOLS / STATUS / HANDOFFS / GAPS / WRAPUP) and reports three states — `PASS`, `SKIP`, `FAIL`. `SKIP` means "this criterion had nothing to judge this run" (e.g. the gap table is empty, which is a legitimate state), so a summary line never reads as "all criteria verified". `tools/verify-layout-mutations.mjs` proves each criterion can actually fail: one injected fault per criterion, asserting both a non-zero exit **and** that the reported failing criterion is the expected one.
+
+The golden suite (`testdata/golden/`) ships with the repo and runs offline via `cfgdelta selftest`. **The suite is not embedded in the binary** — `selftest` locates `testdata/golden` by walking up from the working directory, then up from the executable's directory. A downloaded binary run **outside a checkout** therefore exits 3 (`testdata/golden not found`); run it from the repository root (or any subdirectory of it). There is no `--root` flag — that name appears only as an internal test injection point.
 
 ## Layout
 

@@ -43,6 +43,9 @@ go.work.sum
 /.cache/
 .venv/
 
+# 二次迭代交接目录（诊断/执行记录，属本地工作流，不入库也不进脱敏门）
+update/
+
 # 操作系统垃圾文件
 .DS_Store
 Thumbs.db

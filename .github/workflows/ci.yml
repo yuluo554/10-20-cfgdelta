@@ -20,6 +20,8 @@ jobs:
           node-version: "20"
       - name: "Layout gate (methodology binding)"
         run: node tools/check-sprint-layout.mjs
+      - name: "Layout gate mutation verification (8/8 criteria can go red)"
+        run: node tools/verify-layout-mutations.mjs
       - name: "Desensitization gate (no host paths / usernames / local proxy)"
         run: node tools/check-desensitized.mjs
 
@@ -190,7 +192,14 @@ jobs:
             printf 'Single static binary, zero runtime dependencies, no external commands.\n\n'
             printf 'Native builds: linux/amd64, darwin/arm64, windows/amd64.\n'
             printf 'Verify the downloads: sha256sum -c SHA256SUMS\n\n'
-            printf 'The golden suite (76 cases) runs offline: cfgdelta selftest\n'
+            printf 'The golden suite (76 cases) runs offline, but it is NOT embedded in the binary.\n'
+            printf '`selftest` looks for `testdata/golden` by walking up from the working directory,\n'
+            printf 'then up from the executable directory. It must therefore be run from inside a\n'
+            printf 'checkout of this tag:\n\n'
+            printf '    cd <checkout of %s> && ./cfgdelta-linux-amd64 selftest\n' "${GITHUB_REF_NAME}"
+            printf '    # selftest: 76 passed, 0 failed, 0 skipped\n\n'
+            printf 'Run from an unrelated directory it exits 3 with "testdata/golden not found".\n'
+            printf 'There is no `--root` flag (`--version` and `--help` are the only global flags).\n'
           } > "$notes"
           test -s "$notes"
       - name: "Create GitHub Release"

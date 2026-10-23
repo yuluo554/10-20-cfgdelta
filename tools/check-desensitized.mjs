@@ -12,6 +12,8 @@
 //   或 `127.0.0.1:7897` → 本门 exit 1 并点名该行；删掉该行 → 复绿。
 //
 // 扫描面：仓库内文本文件，跳过 `.git/` `.tmp/` `dist/` `node_modules/` 与二进制。
+// `update/` 是二次迭代的交接目录（诊断/执行记录，已被 .gitignore 忽略、不入库），
+// 与 dist/ 同理属于本地工作产物，一并跳过；它不是源码，不能用来藏任何受版本控制的内容。
 // 公开镜像域名（如 goproxy.cn）不是私有代理，不在判据内。
 //
 // 自豁免：本文件必须写出被判据禁止的字面量（规则本身），因此显式跳过自己。
@@ -23,7 +25,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SELF = "tools/check-desensitized.mjs";
-const SKIP_DIRS = new Set([".git", ".tmp", "dist", "dist-release", "node_modules", ".cache"]);
+const SKIP_DIRS = new Set([".git", ".tmp", "dist", "dist-release", "node_modules", ".cache", "update"]);
 const SKIP_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".zip", ".gz", ".exe"]);
 
 const RULES = [

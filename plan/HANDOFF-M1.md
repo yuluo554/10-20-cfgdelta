@@ -11,7 +11,7 @@ M0（装订 + 骨架）已完成。全部证据均为**本轮实测输出**，�
 | 项 | 状态 | 证据（命令 → 结果） |
 |---|---|---|
 | 第零步装订三件 | ✅ | `AGENTS.md` + `tools/check-sprint-layout.mjs` + `plan/00` 顶部装订行，门已跑绿 |
-| 布局门变异验证 | ✅ | 9 组变异逐组变红，还原后复绿（详见 §4 K-11 的记录） |
+| 布局门变异验证 | ✅ | 9 组变异逐组变红，还原后复绿（详见 §4 K-11 的记录）。**2026-10-23 更正**：当时无实物脚本，「9 组」与 8 条判据也不一致；现由 `tools/verify-layout-mutations.mjs` 提供 8/8 组变异 + 3/3 回归的可复跑证据，见 `plan/RELEASE-M7.md §一` |
 | plan/00–06 七件 | ✅ | 各含必需小节；布局门 `LAYOUT.SECTIONS` 报 `8 份小节齐备` |
 | Go 骨架 5 子命令 | ✅ | `normalize` / `diff` / `classify` / `gate` / `selftest` 均可跑 |
 | 单静态二进制 | ✅ | `CGO_ENABLED=0 go build -trimpath -ldflags "-s -w"` → `dist/cfgdelta.exe`（约 3.0 MB） |

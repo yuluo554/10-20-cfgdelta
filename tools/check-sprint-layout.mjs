@@ -3,16 +3,11 @@
 // 判据一律落**仓库内文件**（不读 git 元数据——浅克隆下 git tag/历史深度会翻转）。
 // 退出码：0 全绿 / 1 有 FAIL / 2 用法错误。
 //
-// 变异验证清单（判据有几条就覆盖几条，见 plan/05 的 G-01）：
-//   M1 删 AGENTS.md                          → LAYOUT.FILES 红
-//   M2 删一份 plan/0x                        → LAYOUT.FILES 红
-//   M3 删 plan/00 顶部装订行                  → LAYOUT.BINDING_HEAD 红
-//   M4 某副本把 ✅ 里程碑翻成 ⬜              → LAYOUT.STATUS 红
-//   M5 删一份 HANDOFF-M<k>                    → LAYOUT.HANDOFFS 红
-//   M6 把已 ✅ 里程碑写回 plan/06 缺口格       → LAYOUT.GAPS 红
-//   M7 删收尾记录                              → LAYOUT.WRAPUP 红
-//   M8 删收尾记录的 DoD 节                     → LAYOUT.WRAPUP 红
-//   M9 文档点名一个不存在的 tools/ 脚本        → LAYOUT.DOC_TOOLS 红
+// **三态**：PASS / SKIP / FAIL。SKIP 表示"本判据此刻没有判定对象"（例如缺口表为空、
+// 发布里程碑还没翻 ✅），它**不是** PASS —— 汇总行会分别计数，避免把"没验"读成"验过了"。
+//
+// 变异验证清单（判据有几条就覆盖几条）：实物是 tools/verify-layout-mutations.mjs，
+// 每条判据一组故障，全红后还原全绿。本文件只声明，实物在那边跑。
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -21,7 +16,14 @@ import { fileURLToPath } from "node:url";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 const checks = [];
-const add = (id, ok, detail) => checks.push({ id, ok, detail });
+/**
+ * status: true → PASS，false → FAIL，"SKIP" → SKIP（本次无判定对象）。
+ * SKIP 不计入 FAIL，也**不**计入"验过了"——汇总行单独报数。
+ */
+const add = (id, status, detail) => {
+  const state = status === "SKIP" ? "SKIP" : status ? "PASS" : "FAIL";
+  checks.push({ id, state, detail });
+};
 const read = (rel) => (existsSync(join(ROOT, rel)) ? readFileSync(join(ROOT, rel), "utf8") : null);
 
 const scanned = { docs: 0, handoffs: 0, copies: 0, docTools: 0 };
@@ -202,7 +204,9 @@ function checkStaleGaps(done) {
     add("LAYOUT.GAPS", false, "plan/06 找不到以「缺口」为首格且带分隔行的表头（判据表搬走了？）");
     return;
   }
-  const col = lines[headerIdx].split("|").length - 2;
+  // 第 1 列（cells[1] 因为 split("|") 首尾各多一个空串）才是「缺口」列。
+  // 取"最后一列"会扫到「目标里程碑」——那是**合法写 ✅ 里程碑**的地方（D2：方向反了）。
+  const col = 1;
   const stale = [];
   let scannedRows = 0;
   // 扫描面：从表头到**下一张表头或文件末**——同一文件后面章节的表格不属于缺口表。
@@ -218,42 +222,72 @@ function checkStaleGaps(done) {
       }
     }
   }
-  const detail = stale.length
-    ? stale.join("；")
-    : `plan/06 缺口列扫了 ${scannedRows} 行，无已 ✅ 里程碑`;
-  add("LAYOUT.GAPS", stale.length === 0, detail);
+  if (stale.length) {
+    add("LAYOUT.GAPS", false, stale.join("；"));
+    return;
+  }
+  // 空缺口表是**合法状态**（plan/06 只登记尚未关闭的缺口）。
+  // 但"扫了 0 行"时"没有陈旧行"恒真 —— 此刻判据什么也没证明，不能报 PASS（D3）。
+  if (scannedRows === 0) {
+    add("LAYOUT.GAPS", "SKIP", "plan/06 缺口表 0 数据行（合法：无未关闭缺口），本判据本次无判定对象");
+    return;
+  }
+  add("LAYOUT.GAPS", true, `plan/06 缺口列扫了 ${scannedRows} 行，无已 ✅ 里程碑`);
 }
 
 /**
- * 收尾记录：只在**发布里程碑**（M6）翻 ✅ 之后才要求存在。
+ * 收尾记录：要求**最新的发布里程碑**有 `plan/RELEASE-M<k>.md` 或 `plan/WRAPUP-M<k>.md`。
  *
  * 为什么不按"最后一个 ✅ 里程碑"要求：M0–M5 是过程中里程碑，收尾记录在那个时点
  * 结构上不可能存在（发布留档必须写在发布前、tag 之前）。按"最后一个 ✅"要求会在
  * 每个中间里程碑制造假红。判据 = **"这个产物在当前时点本来就该存在吗？"**
  *
- * 变异验证：把 M6 翻成 ✅（不建 RELEASE-M6/WRAPUP-M6）→ 本项必须红。
+ * 「发布里程碑」= 最高 ✅ 里程碑中，**已有或应当有**收尾记录的那个。取法：所有 ✅ 里程碑里
+ * 最大的那个（发布总是最后一棒）。这样 v0.1.1 起的再发布不必改本文件。
+ *
+ * 变异验证：把发布里程碑的 RELEASE/WRAPUP 文件删掉 → 本项必须红（见 verify-layout-mutations V8）。
  */
-const RELEASE_MILESTONE = 6;
+function releaseMilestone(done) {
+  return done.length ? Math.max(...done) : 0;
+}
+
+/** plan/ 下所有 RELEASE-M*.md 与 WRAPUP-M*.md（每份都要满足同样的结构）。 */
+function allWraupDocs() {
+  const planDir = join(ROOT, "plan");
+  if (!existsSync(planDir)) return [];
+  return readdirSync(planDir)
+    .filter((f) => /^(RELEASE|WRAPUP)-M\d+\.md$/.test(f))
+    .sort()
+    .map((f) => `plan/${f}`);
+}
 
 function checkWrapup(done) {
-  if (!done.includes(RELEASE_MILESTONE)) {
-    add("LAYOUT.WRAPUP", true, `发布里程碑 M${RELEASE_MILESTONE} 未完成，收尾记录尚不适用（已扫 ${done.length} 个 ✅ 里程碑）`);
+  const k = releaseMilestone(done);
+  if (k === 0) {
+    add("LAYOUT.WRAPUP", "SKIP", "没有已 ✅ 的里程碑，收尾记录尚不适用——本判据本次无判定对象");
     return;
   }
-  const release = read(`plan/RELEASE-M${RELEASE_MILESTONE}.md`);
-  const wrapup = read(`plan/WRAPUP-M${RELEASE_MILESTONE}.md`);
+  const release = read(`plan/RELEASE-M${k}.md`);
+  const wrapup = read(`plan/WRAPUP-M${k}.md`);
   if (!release && !wrapup) {
-    add("LAYOUT.WRAPUP", false, `缺 plan/RELEASE-M${RELEASE_MILESTONE}.md 或 plan/WRAPUP-M${RELEASE_MILESTONE}.md`);
+    add("LAYOUT.WRAPUP", false, `缺 plan/RELEASE-M${k}.md 或 plan/WRAPUP-M${k}.md（M${k} 是最新 ✅ 里程碑）`);
     return;
   }
-  if (release) {
-    const cols = /^##\s*一、tag 前事实/m.test(release) && /^##\s*二、tag 后追加/m.test(release);
-    const heading = /^#{2,3}.*覆盖对账/m.test(release);
-    add("LAYOUT.WRAPUP", cols && heading, `RELEASE 两栏:${cols} 覆盖对账小节:${heading}`);
-    return;
+  // 所有留档都必须"两栏 + 覆盖对账"——最新那份也不例外（防止只写 §一 就发版）。
+  const bad = [];
+  for (const rel of allWraupDocs()) {
+    const text = read(rel);
+    if (text === null) continue;
+    if (rel.includes("/WRAPUP-")) {
+      if (!(text.includes("DoD") && text.includes("偏差"))) bad.push(`${rel} 缺 DoD/偏差节`);
+      continue;
+    }
+    const cols = /^##\s*一、tag 前事实/m.test(text) && /^##\s*二、tag 后追加/m.test(text);
+    const heading = /^#{2,3}.*覆盖对账/m.test(text);
+    if (!cols || !heading) bad.push(`${rel} 两栏:${cols} 覆盖对账:${heading}`);
   }
-  const ok = wrapup.includes("DoD") && wrapup.includes("偏差");
-  add("LAYOUT.WRAPUP", ok, ok ? "WRAPUP 含 DoD + 偏差两节" : "WRAPUP 缺 DoD 或偏差节");
+  const names = allWraupDocs().join(" / ") || "无";
+  add("LAYOUT.WRAPUP", bad.length === 0, bad.length ? bad.join("；") : `${names} 结构齐（M${k} 为最新 ✅ 里程碑）`);
 }
 
 /** 文档点名的 tools/ 脚本必须有实物；非空跑自证（0 处引用 = 判据是空的）。 */
@@ -301,13 +335,21 @@ function main() {
     }
   }
 
-  const failed = checks.filter((c) => !c.ok);
+  const failed = checks.filter((c) => c.state === "FAIL");
+  const skipped = checks.filter((c) => c.state === "SKIP");
+  const passed = checks.filter((c) => c.state === "PASS");
   process.stdout.write("布局门（方法论装订） · 判据只落仓库内文件\n");
   process.stdout.write("=".repeat(56) + "\n");
-  for (const c of checks) process.stdout.write(`${c.ok ? "PASS" : "FAIL"}  ${c.id}  ${c.detail}\n`);
+  for (const c of checks) process.stdout.write(`${c.state.padEnd(4)}  ${c.id}  ${c.detail}\n`);
   process.stdout.write("=".repeat(56) + "\n");
   process.stdout.write(`这轮扫到：文档 ${scanned.docs} / 交接单 ${scanned.handoffs} / 状态副本 ${scanned.copies} / 文档点名工具 ${scanned.docTools}\n`);
-  process.stdout.write(`结论: ${failed.length === 0 ? "全绿" : `${failed.length} 项 FAIL`}\n`);
+  process.stdout.write(
+    `结论: ${failed.length === 0 ? "全绿" : `${failed.length} 项 FAIL`}` +
+      `（PASS ${passed.length} / SKIP ${skipped.length} / FAIL ${failed.length}，共 ${checks.length} 条判据）\n`,
+  );
+  if (skipped.length) {
+    process.stdout.write(`SKIP 的判据本次没有判定对象：${skipped.map((c) => c.id).join(", ")}\n`);
+  }
   process.exitCode = failed.length === 0 ? 0 : 1;
 }
 

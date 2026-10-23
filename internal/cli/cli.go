@@ -91,7 +91,10 @@ SUBCOMMANDS
       differences are still printed. indeterminate still exits 2 unless
       --allow-indeterminate.
   selftest
-      Run the bundled golden suite (no network, no external commands).
+      Run the golden suite shipped in testdata/golden/ (no network, no external
+      commands). The fixtures are NOT embedded in the binary: run from inside a
+      checkout of the repo, otherwise it exits 3 with
+      "testdata/golden not found".
 
 COMMON FLAGS
   --profile <name>        versioned defaults table, e.g. k8s/v1.29

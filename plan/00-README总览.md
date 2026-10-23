@@ -23,9 +23,10 @@
 | `plan/04-数据计划.md` | 数据清单 / profile 形状 / golden 分层 / 真值纪律 / 生成器与守门 | ✅ v1（M0 落盘） |
 | `plan/05-里程碑与验收.md` | M0–M6 DoD / **K 编号清单** / 已知未验证项 / 排期 | ✅ v1（M0 落盘） |
 | `plan/06-交付对标.md` | 提交材料落点 / 评分对标 / 风险登记 / 缺口表 | ✅ v1（M0 落盘） |
-| `plan/HANDOFF-M<next>.md` | 每里程碑续接快照（七节） | ✅ `HANDOFF-M1`–`M6` 已落盘；M6 为末棒（无 M7），收尾事实见 `plan/RELEASE-M6.md §二` |
+| `plan/HANDOFF-M<next>.md` | 每里程碑续接快照（七节） | ✅ `HANDOFF-M1`–`M7` 已落盘；M7 为末棒（缺陷修复与再发布），收尾事实见 `plan/RELEASE-M7.md §二` |
 | `data/README.md` | 依据查证（三态 + issue/HN 编号 + 基准日）/ 可复现实测命令 / 数据源记录 / 合成数据纪律 / 数值口径纪律 | ✅ v1（出题阶段 4，2026-10-20） |
-| `tools/check-sprint-layout.mjs` | 布局门（方法论装订第②件） | ✅ v1（9 组变异验证） |
+| `tools/check-sprint-layout.mjs` | 布局门（方法论装订第②件） | ✅ v1.1（三态 PASS/SKIP/FAIL；8 条判据） |
+| `tools/verify-layout-mutations.mjs` | 布局门变异验证实物（一条判据一组故障） | ✅ v1（**8/8 组变异如期变红 + 3/3 条回归断言**；接入 `make check` 与 CI `layout` job） |
 | `.gitignore` | Go 编译产物 / 二进制 / 覆盖率 | ✅ v1 |
 | `README.md` / `LICENSE` / `docs/testA-before-after.png` | 对外说明 / 许可 / 首屏对照截图 | ✅ 三件齐（截图 M5 落盘并进 README 首屏） |
 
@@ -96,13 +97,14 @@
 
 | 里程碑 | 内容 | DoD 要点 | 状态 |
 |---|---|---|---|
-| **M0 装订与骨架** | 第零步装订（AGENTS.md + 布局门 + plan/00 装订行）+ plan/00–06 + Go 骨架（5 子命令）+ CI | 布局门 9 组变异全红；`go vet` / `go test` / `selftest` 全绿；单静态二进制可跑；CI workflow 本地解析通过 | ✅ 完成（2026-10-20，本地等价校验，未接远端） |
+| **M0 装订与骨架** | 第零步装订（AGENTS.md + 布局门 + plan/00 装订行）+ plan/00–06 + Go 骨架（5 子命令）+ CI | 布局门 8 条判据各有变异验证（实物 `tools/verify-layout-mutations.mjs`）；`go vet` / `go test` / `selftest` 全绿；单静态二进制可跑；CI workflow 本地解析通过 | ✅ 完成（2026-10-20，本地等价校验，未接远端；2026-10-23 补实测：变异脚本 8/8 组变红 + 3/3 回归成立） |
 | **M1 数据先行** | golden 四组夹具（测试A/B/C/D）+ 三家基线留档 + 10 条默认值表 + `plan/02`/`03`/`04` 落盘 | 夹具最小可复现；基线留档含版本号与调用命令；默认值表为版本化 JSON 且每条带来源标注；`plan/03` 模块数与 plan/01 一致 | ✅ 完成（2026-10-20：三家 40 个 `.out` 留档 + 守门 7 组变异全红；10 条规则逐条核对到上游源码，抓出并修掉 1 条条件性默认值） |
 | **M2 归一化** | M1 模块（normalize 引擎）：Quantity / Duration / 十进制 / 布尔族 / null 三态 / `indeterminate` | 测试C 七组 100% 判等；`1Gi` vs `1000M` 判不等；`MB` vs `MiB` 判 indeterminate 且带理由码；浮点禁令有静态拦截；双跑字节一致 | ✅ 完成（2026-10-20：golden 35 例 33 pass / 2 显式 skip；测试C 七组全等、c08 反例 rc=1、c09 exit 2；浮点门 0 命中；双跑 `cmp` 逐字节一致；修掉 `ParseDecimal` 不接受符号导致 `+1`/`-0` 报错的缺陷，新增 5 条文法边界 + 1 条非法 YAML golden） |
 | **M3 结构比较** | M2 模块（diff 引擎）：键序无关 / 序列三模式 / 注释零噪声 | 四类结构差异零条目；`keyed:` 重复键报错；`set` 乱序零差异；双跑字节一致 | ✅ 完成（2026-10-20：新增 `testM3` 10 条 golden——四类噪声均 0 条目 exit 0、set 乱序 0 条、set 重复 exit 2、keyed 乱序 0 条、keyed 重复 exit 3 且输出带 `/items/1`、RFC 6901 `/a~1b`+`/c~0d`；`selftest` 45 例 43 pass / 2 显式 skip；双跑 `cmp` 三组逐字节一致） |
 | **M4 默认值** | M3 模块（profile）：双侧施加 + 抵消 + 未命中降级 | **测试A 4 条 → 0 条**；显式非默认对照组仍报 1 条；未知 profile 版本明确报错；`--dump-normalized` 可见双侧默认值 | ✅ 完成（2026-10-20：`testA-profile` exit 0 / behavioral 0 / cosmetic 2、`testA-ctrl-profile` exit 1、未知版本 exit 3；新增 `testM4/` 32 个夹具 21 条 golden——10 条规则各一对「抵消 + 显式非默认」+ 降级标注；施加顺序改为 §4.11 的路径序并暴露 `Applied` 供断言；selftest 66 例 64 pass / 2 显式 skip；4 组变异全红后还原） |
 | **M5 分类门禁** | M4 模块 + M5 模块（多格式适配器）；README 首屏截图 | **测试B 5 条 exit 1 → 0 行为差异 exit 0**；五类各一例；退出码 0/1/2/3 逐位断言；测试D TOML 零噪声；`docs/testA-before-after.png` 落盘 | ✅ 完成（2026-10-20：测试B 的 5 行语义在 `keyed:name` / `set` 下 0 行为差异（`ordered` 下 4+2 是显式模式的诚实结果，口径已查清）；六类各一例 + semver 四例端到端；TOML/HCL/INI/.env 适配器按扩展名分派，未知格式 exit 3；HCL 表达式 `unevaluated_expression`；selftest 76 例 76 pass / 0 skip；首屏截图落盘；4 组变异全红后还原） |
 | **M6 发布** | 发布 **GitHub 公开仓库**（署名 `yuluo554`） | **三件套：① git tag ② GitHub Release 附产物（≥1 个手工上传附件：三平台二进制 + `SHA256SUMS`；本地留副本 + sha256 可复验）③ 发布留档（`plan/RELEASE-M6.md`，须在 tag 之前进 tag 树）**；缺任一项即未达成。另：干净环境 clone 按 README 跑通；提交面脱敏扫描 0 命中 | ✅ 完成（2026-10-20：tag `v0.1.0` → `de5599eb`；Release 四件（三平台二进制 + `SHA256SUMS`）已发布并真下载 `sha256sum -c` 复验 OK；`plan/RELEASE-M6.md` 在 tag 前落盘；干净 clone 按 README 跑通 selftest 76 passed；脱敏门 0 命中。已知偏差：v0.1.0 的 `publish` job 因说明文件路径缺陷失败，Release 用该 run 的真实产物手工发布，修正提交在 tag 之后且不回改 tag——详见 `plan/RELEASE-M6.md §2.3`） |
+| **M7 缺陷修复与再发布** | 二次迭代：修布局门本身（GAPS 列方向 / 空表空转 / PASS-vs-SKIP）、补变异验证实物、对齐 `selftest` 对外表述 | **布局门每条判据都有可复跑的变异证据**（`tools/verify-layout-mutations.mjs`：8/8 组变异如期变红 + 回归断言成立）；五道门全绿；产品行为面零改动；新 tag + Release 且留档在 tag 前落盘 | ✅ 完成（2026-10-23：`VERSION` 0.1.0→**0.1.1**；布局门引入 PASS/SKIP/FAIL 三态，缺口表 0 行由 PASS 降为 SKIP；GAPS 改扫第 1 列（此前扫的是「目标里程碑」列，方向相反）；`verify-layout-mutations.mjs` 落地并接入 `make check` 与 CI `layout` job；`selftest` 的「bundled / runs offline」表述在 README / `--help` / Release 正文三处改为「未嵌入二进制，须在一份 checkout 里跑」；`update/` 加入脱敏门的 `SKIP_DIRS` 与 `.gitignore`。详见 `plan/RELEASE-M7.md`） |
 
 ## 五、纪律
 

@@ -6,7 +6,8 @@
 ## 任何新对话的第一件事
 
 ```bash
-node tools/check-sprint-layout.mjs    # 布局门；必须绿，红了先修布局再干活
+node tools/check-sprint-layout.mjs       # 布局门；必须绿，红了先修布局再干活
+node tools/verify-layout-mutations.mjs   # 它的变异验证：8/8 组如期变红才算门是活的
 ```
 
 - **续接对话**：读 `plan/HANDOFF-M<k>.md`（第 k 棒的收尾交接单），**先跑上面这条门**。
@@ -34,7 +35,8 @@ node tools/check-sprint-layout.mjs    # 布局门；必须绿，红了先修布�
 
 ## 环境事实与禁忌（带实测日期）
 
-- 2026-10-20 实测：本机 **无 `go` 命令**，Go 1.24.5 解压在仓库外 `C:\Users\<user>\go-sdk\go`（`.tmp/sdk/go` 在本机不存在；`/.tmp/` 已被 `.gitignore` 排除）；`GOFLAGS=-mod=mod GOPROXY=https://goproxy.cn,direct` 可拉取 `gopkg.in/yaml.v3`。
+- 2026-10-20 实测：本机 **无 `go` 命令**，Go 1.24.5 解压在仓库外的 SDK 目录（`%USERPROFILE%\go-sdk\go`，即用户主目录下的 `go-sdk/go`）；`GOFLAGS=-mod=mod GOPROXY=https://goproxy.cn,direct` 可拉取 `gopkg.in/yaml.v3`。仓库内的 `.tmp/sdk/go` 在本机不存在（`/.tmp/` 已被 `.gitignore` 排除）。
+- 2026-10-23 实测：另一条不装 SDK 的路子是 `GOTOOLCHAIN=go1.24.7`（已在 module 缓存里，无需下载）；`go.mod` 写 `go 1.24`，两个版本都绿。
 - 2026-10-20 实测：`node v24.15.0` 可用；`py -0p` 有 3.8 与 3.12；`rustc 1.95.0` 可用（未选）。
-- 2026-10-20 实测：`crates.io` 直连 403、`api.github.com` 200；`github.com` git 通道不稳时先试本地代理 `<local-proxy>`。
+- 2026-10-20 实测：`crates.io` 直连 403、`api.github.com` 200。`github.com` 的 git 通道不稳时走本地 HTTP 代理（**代理地址不入库**：写死具体 host:port 会被 `tools/check-desensitized.mjs` 的 `loopback-proxy` 规则抓红，所以这里只记"本机有一个本地代理、按环境变量 `HTTPS_PROXY` 取"）。
 - **禁止**：把"未执行"写成已完成；在 tag 之后改代码面；把会话里的绝对路径写进库内文档。
