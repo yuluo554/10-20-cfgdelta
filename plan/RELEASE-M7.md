@@ -119,20 +119,25 @@ sha256sum -c SHA256SUMS --ignore-missing
 
 ### 1.6 被 tag 的提交
 
-- tag 对象 `7fbb327`（annotated）→ 指向提交 `69e3529e3a3000b19b4fcefc701ca0f3e6d20882`
-- tag 前的 main 两个提交：
-  - `06cad17` M7：修布局门本身 + 补变异验证实物 + 对齐 selftest 对外表述（v0.1.0 → v0.1.1）
-  - `69e3529` verify-layout-mutations：在没有 .git 的源码包/导出树里也能跑
-- tag 树**包含本节以外的全部 §一 内容**（含 `plan/RELEASE-M7.md` 自身、`plan/HANDOFF-M7.md`、`tools/verify-layout-mutations.mjs`）
+⏳ **见 §2.1**。tag 对象 id 与它指向的提交在 tag 之前无法得知，按本文件开头的两栏纪律，
+这一节在 tag 树里保持为指针，实际值只写进 §二（不在 tag 后回改 §一）。
 
 ## 二、tag 后追加
 
 ### 2.1 tag
 
-- 本地：`v0.1.1`（annotated，对象 `7fbb327` → 提交 `69e3529`）
+- 本地：`v0.1.1`（annotated，对象 `7fbb327` → 提交 `69e3529e3a3000b19b4fcefc701ca0f3e6d20882`）
 - 远端与本地一致；`v0.1.0`（对象 `4834c47` → `de5599eb`）**未动**
+- tag 前的 main 两个提交：
+  - `06cad17` M7：修布局门本身 + 补变异验证实物 + 对齐 selftest 对外表述（v0.1.0 → v0.1.1）
+  - `69e3529` verify-layout-mutations：在没有 .git 的源码包/导出树里也能跑
+- tag 树包含 §一 的全部内容与 `plan/RELEASE-M7.md` 自身、`plan/HANDOFF-M7.md`、
+  `tools/verify-layout-mutations.mjs`
 - push 通道：HTTPS 直连与本地代理均失败（`Recv failure: Connection was reset`），
   改走 `ssh://git@ssh.github.com:443/...` 成功；main 推送 `4dc84d1..69e3529`
+- **偏差（已自我更正）**：回填 §二 的那次提交（`0218730`）一度把 §1.6 也填了实际值，
+  违反本文件开头「§一 不回改」。现已把 §1.6 还原为指向本节的指针，与 tag 树里的形态一致；
+  本节是 tag 信息的**唯一**落点。
 
 ### 2.2 Release
 
